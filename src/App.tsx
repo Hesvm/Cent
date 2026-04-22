@@ -1,3 +1,4 @@
+import { SpeedInsights } from '@vercel/speed-insights/react'
 import { MockExpenseProvider } from './context/MockExpenseContext'
 import { Header } from './components/layout/Header'
 import { TransactionList } from './components/transactions/TransactionList'
@@ -13,6 +14,7 @@ export default function App() {
         <InputBar />
         <UndoToast />
       </div>
+      <SpeedInsights />
     </MockExpenseProvider>
   )
 }
