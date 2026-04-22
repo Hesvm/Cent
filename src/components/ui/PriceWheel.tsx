@@ -7,10 +7,8 @@ interface PriceWheelProps {
   type?: 'expense' | 'income'
 }
 
-// Horizontal ruler — each tick = $1, major tick every 5, labelled every 10
-const TICK_PX = 8
+const TICK_PX = 10       // px per $1 tick
 const MAX_DOLLARS = 9999
-const CENTS = [0, 25, 50, 75, 99]
 
 function clamp(v: number, min: number, max: number) {
   return Math.max(min, Math.min(max, v))
@@ -22,7 +20,6 @@ interface RulerProps {
 }
 
 function Ruler({ value, onChange }: RulerProps) {
-  const trackRef = useRef<HTMLDivElement>(null)
   const drag = useRef<{ startX: number; startValue: number } | null>(null)
   const lastValue = useRef(value)
 
@@ -49,38 +46,43 @@ function Ruler({ value, onChange }: RulerProps) {
 
   useEffect(() => { lastValue.current = value }, [value])
 
-  // Render a window of ticks around the current value for performance
-  const WINDOW = 60
+  const WINDOW = 50
   const start = Math.max(0, value - WINDOW)
   const end = Math.min(MAX_DOLLARS, value + WINDOW)
   const ticks: number[] = []
   for (let i = start; i <= end; i++) ticks.push(i)
 
   return (
+    // Pill-shaped track container
     <div
-      ref={trackRef}
       className="relative overflow-hidden cursor-grab active:cursor-grabbing touch-pan-y select-none"
-      style={{ height: 56 }}
+      style={{
+        height: 52,
+        borderRadius: 100,
+        background: '#F5F4F0',
+      }}
       onPointerDown={onPointerDown}
       onPointerMove={onPointerMove}
       onPointerUp={onPointerUp}
       onPointerCancel={onPointerUp}
     >
-      {/* Center indicator */}
+      {/* Center indicator line */}
       <div
-        className="absolute left-1/2 top-0 bottom-0 pointer-events-none z-10"
-        style={{ width: 2, marginLeft: -1, background: '#1A1A1A', borderRadius: 1 }}
+        className="absolute top-0 bottom-0 left-1/2 pointer-events-none z-10"
+        style={{ width: 2, marginLeft: -1, background: '#1A1A1A', borderRadius: 2 }}
       />
 
-      {/* Fades */}
+      {/* Side fades */}
       <div
         className="absolute inset-0 pointer-events-none z-20"
-        style={{ background: 'linear-gradient(to right, #fff 0%, transparent 20%, transparent 80%, #fff 100%)' }}
+        style={{
+          background: 'linear-gradient(to right, #F5F4F0 0%, transparent 18%, transparent 82%, #F5F4F0 100%)',
+        }}
       />
 
-      {/* Tick rail */}
+      {/* Tick rail — anchored at center, translates left as value grows */}
       <div
-        className="absolute top-0 bottom-0 flex items-end"
+        className="absolute inset-0 flex items-end pb-3"
         style={{
           left: '50%',
           transform: `translateX(${-value * TICK_PX}px)`,
@@ -90,19 +92,32 @@ function Ruler({ value, onChange }: RulerProps) {
         {ticks.map((n) => {
           const isMajor = n % 10 === 0
           const isMid = n % 5 === 0
-          const h = isMajor ? 24 : isMid ? 16 : 10
+          const h = isMajor ? 20 : isMid ? 13 : 8
+          const w = isMajor ? 2 : 1
+          const color = isMajor ? '#555' : '#BBBBB'
           return (
             <div
               key={n}
-              className="flex flex-col items-center justify-end"
-              style={{ width: TICK_PX, position: 'absolute', left: (n - start) * TICK_PX, bottom: 0, top: 0 }}
+              style={{
+                position: 'absolute',
+                left: (n - start) * TICK_PX,
+                bottom: 0,
+                width: TICK_PX,
+                display: 'flex',
+                justifyContent: 'center',
+                alignItems: 'flex-end',
+                height: '100%',
+                paddingBottom: 10,
+              }}
             >
-              <div style={{ width: 1, height: h, background: isMajor ? '#1A1A1A' : '#C0C0C0', marginTop: 'auto' }} />
-              {isMajor && (
-                <span className="text-[10px] text-text-secondary font-rounded" style={{ position: 'absolute', top: 0 }}>
-                  {n}
-                </span>
-              )}
+              <div
+                style={{
+                  width: w,
+                  height: h,
+                  background: color,
+                  borderRadius: 2,
+                }}
+              />
             </div>
           )
         })}
@@ -112,57 +127,38 @@ function Ruler({ value, onChange }: RulerProps) {
 }
 
 export function PriceWheel({ onConfirm, onDismiss, initialValue = 0, type = 'expense' }: PriceWheelProps) {
-  const initInt = Math.floor(initialValue)
-  const initCents = Math.round((initialValue - initInt) * 100)
-  const [dollars, setDollars] = useState(clamp(initInt, 0, MAX_DOLLARS))
-  const [cents, setCents] = useState(CENTS.includes(initCents) ? initCents : 0)
+  const [dollars, setDollars] = useState(clamp(Math.round(initialValue), 0, MAX_DOLLARS))
 
-  const value = dollars + cents / 100
   const accent = type === 'income' ? 'bg-income hover:bg-green-700' : 'bg-send hover:bg-red-600'
 
   return (
-    <div className="bg-white rounded-2xl mx-2 mb-2 overflow-hidden animate-clarify-up float-shadow">
-      {/* Amount display */}
-      <div className="flex items-center justify-between px-5 pt-4 pb-3">
-        <span className="text-[14px] text-text-secondary font-rounded">How much?</span>
-        <span className="text-[28px] font-bold text-text-primary font-rounded tabular-nums">
-          ${dollars.toLocaleString()}.{String(cents).padStart(2, '0')}
+    <div className="bg-white rounded-3xl mx-2 mb-2 overflow-hidden animate-clarify-up float-shadow">
+      {/* Centered amount display */}
+      <div className="flex flex-col items-center pt-5 pb-3">
+        <span className="text-[13px] text-text-secondary font-rounded mb-1">How much?</span>
+        <span className="text-[40px] font-bold text-text-primary font-rounded tabular-nums leading-none">
+          ${dollars.toLocaleString()}
         </span>
       </div>
 
       {/* Horizontal ruler */}
-      <div className="px-2">
+      <div className="px-4 pb-4">
         <Ruler value={dollars} onChange={setDollars} />
       </div>
 
-      {/* Cents chips */}
-      <div className="flex gap-2 px-4 pt-2 pb-3 justify-center">
-        {CENTS.map((c) => (
-          <button
-            key={c}
-            onClick={() => setCents(c)}
-            className={`text-[12px] font-semibold rounded-pill px-3 py-1 font-rounded transition-colors ${
-              cents === c ? 'bg-text-primary text-white' : 'bg-[#F0EEE8] text-text-secondary hover:bg-[#E8E6E0]'
-            }`}
-          >
-            .{String(c).padStart(2, '0')}
-          </button>
-        ))}
-      </div>
-
       {/* Actions */}
-      <div className="flex gap-2 px-4 pb-4">
+      <div className="flex gap-2 px-4 pb-5">
         <button
           onClick={onDismiss}
-          className="flex-1 py-3 rounded-xl bg-[#F0EEE8] text-[15px] font-semibold text-text-secondary font-rounded"
+          className="flex-1 py-3 rounded-full bg-[#F0EEE8] text-[15px] font-semibold text-text-secondary font-rounded"
         >
           Cancel
         </button>
         <button
-          onClick={() => onConfirm(value)}
-          className={`flex-1 py-3 rounded-xl text-[15px] font-semibold text-white font-rounded transition-colors ${accent}`}
+          onClick={() => onConfirm(dollars)}
+          className={`flex-1 py-3 rounded-full text-[15px] font-semibold text-white font-rounded transition-colors ${accent}`}
         >
-          Set ${dollars.toLocaleString()}.{String(cents).padStart(2, '0')}
+          Set ${dollars.toLocaleString()}
         </button>
       </div>
     </div>

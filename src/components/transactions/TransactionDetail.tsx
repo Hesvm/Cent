@@ -242,7 +242,7 @@ export function TransactionDetail({ transaction, onClose }: TransactionDetailPro
                   <button
                     key={c}
                     onClick={() => setCategory(c)}
-                    className={`text-[13px] font-rounded rounded-lg py-2 transition-colors ${
+                    className={`text-[13px] font-rounded rounded-full py-2 transition-colors ${
                       transaction.category === c
                         ? 'bg-text-primary text-white font-semibold'
                         : 'bg-white text-text-primary hover:bg-gray-50'

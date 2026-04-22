@@ -200,7 +200,7 @@ export function InputBar() {
 
       {/* Confirmation card */}
       {inputState === 'confirming' && confirmData.name && (
-        <div className="mx-2 mb-2 rounded-2xl border border-[#EBEBEB] bg-white px-4 py-3 flex items-center gap-3 animate-clarify-up">
+        <div className="mx-2 mb-2 rounded-3xl border border-[#EBEBEB] bg-white px-4 py-3 flex items-center gap-3 animate-clarify-up">
           <img
             src={getImageUrl(confirmImageSlug)}
             alt={confirmData.name}

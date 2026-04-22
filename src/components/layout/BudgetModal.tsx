@@ -48,7 +48,7 @@ export function BudgetModal({ budget, onClose }: BudgetModalProps) {
       onClick={(e) => { if (e.target === backdropRef.current) close() }}
     >
       <div
-        className={`bg-white rounded-t-[20px] w-full max-w-lg mx-auto ${isClosing ? 'animate-slide-down' : 'animate-slide-up'}`}
+        className={`bg-white rounded-t-[28px] w-full max-w-lg mx-auto ${isClosing ? 'animate-slide-down' : 'animate-slide-up'}`}
         onClick={(e) => e.stopPropagation()}
       >
         <div className="flex justify-center pt-3 pb-1">
