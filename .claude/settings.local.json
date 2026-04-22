@@ -18,7 +18,16 @@
       "Bash(cp \"/Library/Fonts/SF-Pro-Rounded-Bold.otf\" /Users/hesam/Code-Projects/Cent/public/fonts/)",
       "Bash(git init *)",
       "Bash(git remote *)",
-      "Bash(git add *)"
+      "Bash(git add *)",
+      "Bash(git commit -m ' *)",
+      "Bash(git push *)",
+      "Bash(gh auth *)",
+      "Bash(ssh -T git@github.com)",
+      "Bash(git config *)",
+      "mcp__f5d8ec91-93c2-45a5-9a3b-c02b41a453f3__deploy_to_vercel",
+      "mcp__f5d8ec91-93c2-45a5-9a3b-c02b41a453f3__list_teams",
+      "Bash(vercel --version)",
+      "Bash(npx vercel *)"
     ]
   }
 }

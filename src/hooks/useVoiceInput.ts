@@ -11,13 +11,13 @@ interface UseVoiceInputResult {
 export function useVoiceInput(): UseVoiceInputResult {
   const [isRecording, setIsRecording] = useState(false)
   const [error, setError] = useState<string | null>(null)
-  const recognitionRef = useRef<SpeechRecognition | null>(null)
+  // eslint-disable-next-line @typescript-eslint/no-explicit-any
+  const recognitionRef = useRef<any>(null)
   const timeoutRef = useRef<ReturnType<typeof setTimeout> | null>(null)
 
-  const SpeechRecognition =
-    typeof window !== 'undefined'
-      ? (window.SpeechRecognition ?? window.webkitSpeechRecognition ?? null)
-      : null
+  // eslint-disable-next-line @typescript-eslint/no-explicit-any
+  const w = typeof window !== 'undefined' ? (window as any) : null
+  const SpeechRecognition = w ? (w.SpeechRecognition ?? w.webkitSpeechRecognition ?? null) : null
 
   const isSupported = SpeechRecognition !== null
 
@@ -31,7 +31,8 @@ export function useVoiceInput(): UseVoiceInputResult {
       recognition.interimResults = false
       recognition.maxAlternatives = 1
 
-      recognition.onresult = (e) => {
+      // eslint-disable-next-line @typescript-eslint/no-explicit-any
+      recognition.onresult = (e: any) => {
         const transcript = e.results[0]?.[0]?.transcript ?? ''
         if (transcript.trim()) {
           onResult(transcript.trim())

@@ -1,5 +1,5 @@
 import { useState, useRef, useEffect, useCallback } from 'react'
-import type { TransactionType, InputState, Category } from '../../types'
+import type { TransactionType, InputState } from '../../types'
 import { useVoiceInput } from '../../hooks/useVoiceInput'
 import { useAIParsing } from '../../hooks/useAIParsing'
 import { useExpense } from '../../context/MockExpenseContext'
@@ -8,7 +8,6 @@ import { getImageSlug, getImageUrl } from '../../utils/transactionImages'
 import { ClarificationSheet } from './ClarificationSheet'
 import { VoiceButton } from './VoiceButton'
 import { PriceWheel } from '../ui/PriceWheel'
-import { TransactionImage } from '../ui/TransactionImage'
 
 const TOAST_DURATION = 3000
 
@@ -165,6 +164,7 @@ export function InputBar() {
   const confirmImageSlug = confirmData.category
     ? getImageSlug(confirmData.category, confirmData.name ?? '')
     : 'credit-card'
+  const isSaving = inputState === 'saving'
 
   return (
     <div className="bg-bg-page safe-bottom">
@@ -216,12 +216,12 @@ export function InputBar() {
           </div>
           <button
             onClick={handleConfirm}
-            disabled={inputState === 'saving'}
+            disabled={isSaving}
             className={`text-white text-[12px] font-semibold rounded-pill px-4 py-1.5 transition-colors disabled:opacity-60 font-rounded ${
               confirmData.type === 'income' ? 'bg-income hover:bg-green-700' : 'bg-send hover:bg-red-600'
             }`}
           >
-            {inputState === 'saving' ? '…' : 'Add'}
+            {isSaving ? '…' : 'Add'}
           </button>
         </div>
       )}
