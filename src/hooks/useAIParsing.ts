@@ -225,7 +225,7 @@ function buildClarificationQueue(
       field: 'amount',
       question: `Just confirming — $${parsed.amount.toLocaleString()} for ${parsed.name ?? 'this'}?`,
       options: [
-        { id: 1, label: 'Yes, that's right', value: String(parsed.amount) },
+        { id: 1, label: "Yes, that's right", value: String(parsed.amount) },
         { id: 2, label: 'No, let me re-enter', value: '__ask__' },
       ],
     })
