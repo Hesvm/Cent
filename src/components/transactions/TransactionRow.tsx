@@ -73,7 +73,7 @@ export function TransactionRow({ transaction, onClick, isLast, isPending }: Tran
       </button>
 
       {!isLast && (
-        <div style={{ marginLeft: '16px', marginRight: '16px', borderTop: '1.5px dashed #C4C4C4' }} />
+        <div style={{ marginLeft: '16px', marginRight: '16px', borderTop: '1.5px dashed #E3E3DE' }} />
       )}
     </>
   )
