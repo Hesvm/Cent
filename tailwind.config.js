@@ -5,14 +5,15 @@ export default {
     extend: {
       colors: {
         bg: {
-          page: '#F0EEE8',
+          page: '#FBFBF8',
           card: '#FFFFFF',
-          tag: '#EBEBEB',
+          tag: '#F4F4F3',
         },
         text: {
           primary: '#1A1A1A',
           secondary: '#888888',
           hint: '#AAAAAA',
+          tag: '#A4A297',
         },
         income: {
           DEFAULT: '#2E7D32',
@@ -23,7 +24,7 @@ export default {
           icon: '#D32F2F',
         },
         send: '#E8403A',
-        divider: '#E0E0E0',
+        divider: '#E3E3E2',
         border: '#E5E5E5',
       },
       fontFamily: {
