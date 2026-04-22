@@ -1,131 +1,282 @@
-import { useState, useCallback } from 'react'
+import { useState, useCallback, useRef } from 'react'
 import type { ParsedExpense, ClarificationStep, TransactionType, Category, Frequency } from '../types'
 
-const RECURRING_KEYWORDS = ['rent', 'salary', 'subscription', 'membership', 'insurance', 'loan']
+// ─── Constants ────────────────────────────────────────────────────────────────
 
-// ─── Local parser ───────────────────────────────────────────────────────────
-// Runs synchronously before the API. If it can extract a name + amount with
-// high confidence, the API call is skipped entirely.
+// Per spec §4C / §11 implementation notes
+const RECURRING_KEYWORDS = [
+  'rent', 'salary', 'subscription', 'membership', 'insurance',
+  'loan', 'mortgage', 'lease', 'stipend', 'allowance', 'retainer',
+  'tuition', 'bill', 'installment',
+]
 
 const CATEGORY_KEYWORDS: [string[], Category][] = [
-  [['coffee', 'latte', 'espresso', 'americano', 'cappuccino', 'matcha', 'starbucks', 'café', 'cafe', 'tea', 'lunch', 'dinner', 'breakfast', 'brunch', 'restaurant', 'pizza', 'burger', 'sushi', 'taco', 'ramen', 'sandwich', 'bar', 'beer', 'wine', 'cocktail', 'drink'], 'Dining'],
-  [['uber', 'lyft', 'taxi', 'gas', 'fuel', 'parking', 'metro', 'subway', 'train', 'bus', 'toll', 'transit', 'transport'], 'Transport'],
-  [['gym', 'fitness', 'yoga', 'workout', 'crossfit', 'pilates', 'boxing', 'running', 'cycling', 'dumbbell', 'treadmill', 'membership'], 'Fitness'],
-  [['grocery', 'groceries', 'supermarket', 'walmart', 'costco', 'trader', 'whole foods', 'safeway', 'kroger', 'market'], 'Groceries'],
-  [['netflix', 'spotify', 'hulu', 'disney', 'apple', 'amazon prime', 'subscription', 'icloud'], 'Entertainment'],
-  [['amazon', 'target', 'shopping', 'clothes', 'shoes', 'shirt', 'jacket', 'dress', 'sneakers', 'ikea', 'zara', 'h&m'], 'Shopping'],
-  [['rent', 'mortgage', 'housing', 'landlord', 'utilities', 'electricity', 'water', 'internet', 'wifi', 'phone', 'insurance'], 'Housing'],
-  [['doctor', 'dentist', 'pharmacy', 'prescription', 'hospital', 'clinic', 'health', 'vet', 'medical'], 'Health'],
-  [['salary', 'paycheck', 'income', 'freelance', 'bonus', 'dividend', 'transfer', 'deposit', 'refund', 'cashback'], 'Income'],
+  [['coffee', 'latte', 'espresso', 'americano', 'cappuccino', 'matcha', 'starbucks', 'café', 'cafe', 'tea', 'lunch', 'dinner', 'breakfast', 'brunch', 'restaurant', 'pizza', 'burger', 'sushi', 'taco', 'ramen', 'sandwich', 'bar', 'beer', 'wine', 'cocktail', 'drink', 'boba', 'bakery'], 'Dining'],
+  [['uber', 'lyft', 'taxi', 'cab', 'gas', 'fuel', 'parking', 'metro', 'subway', 'train', 'bus', 'toll', 'transit', 'transport', 'flight', 'airfare', 'airline'], 'Transport'],
+  [['gym', 'fitness', 'yoga', 'workout', 'crossfit', 'pilates', 'boxing', 'running', 'cycling', 'dumbbell', 'treadmill', 'peloton', 'swim', 'sport'], 'Fitness'],
+  [['grocery', 'groceries', 'supermarket', 'walmart', 'costco', 'trader', 'whole foods', 'safeway', 'kroger', 'market', 'aldi', 'produce'], 'Groceries'],
+  [['netflix', 'spotify', 'hulu', 'disney', 'apple tv', 'amazon prime', 'icloud', 'youtube', 'game', 'cinema', 'movie', 'concert', 'ticket', 'stream'], 'Entertainment'],
+  [['amazon', 'target', 'shopping', 'clothes', 'shoes', 'shirt', 'jacket', 'dress', 'sneakers', 'ikea', 'zara', 'h&m', 'ebay', 'etsy', 'store', 'mall', 'shop'], 'Shopping'],
+  [['rent', 'mortgage', 'landlord', 'housing', 'internet', 'wifi', 'phone', 'electric', 'water', 'gas bill', 'utilities', 'home', 'lease'], 'Housing'],
+  [['doctor', 'dentist', 'pharmacy', 'prescription', 'hospital', 'clinic', 'health', 'vet', 'medical', 'therapy', 'medicine', 'drug'], 'Health'],
+  [['salary', 'paycheck', 'income', 'freelance', 'bonus', 'dividend', 'deposit', 'refund', 'cashback', 'reimbursement', 'payment received', 'got paid', 'earned'], 'Income'],
 ]
 
 const FREQUENCY_KEYWORDS: [string[], Frequency][] = [
-  [['daily', 'every day', 'per day'], 'daily'],
-  [['weekly', 'every week', 'per week'], 'weekly'],
-  [['monthly', 'every month', 'per month', 'month'], 'monthly'],
+  [['daily', 'every day', 'each day', 'per day'], 'daily'],
+  [['weekly', 'every week', 'each week', 'per week'], 'weekly'],
+  [['monthly', 'every month', 'each month', 'per month'], 'monthly'],
   [['yearly', 'annual', 'annually', 'per year', 'every year'], 'yearly'],
 ]
 
-function localParse(text: string, type: TransactionType): ParsedExpense {
+// Words that signal this is a question/command, not an expense (§2E)
+const QUESTION_PATTERNS = [
+  /^(how|what|where|when|why|who)\b/i,
+  /^(show|tell|help|give|list|find|get|can you|could you|please show)\b/i,
+  /^(what'?s|how much|how many)\b/i,
+  /\?$/,
+]
+
+// Income signal words (§3B)
+const INCOME_KEYWORDS = [
+  'salary', 'income', 'received', 'got paid', 'payment from', 'freelance',
+  'refund', 'cashback', 'reimbursed', 'earned', 'bonus', 'dividend',
+  'returned', 'got back', 'money back', 'deposit',
+]
+
+// Refund signal words (§10A)
+const REFUND_KEYWORDS = ['refund', 'return', 'got back', 'money back', 'reimbursed', 'returned shoes', 'returned item']
+
+// Large amount threshold (§1E)
+const LARGE_AMOUNT_THRESHOLD = 10000
+
+// ─── Word-number parsing (§9A) ────────────────────────────────────────────────
+
+const WORD_NUM_PATTERNS: [RegExp, number][] = [
+  [/\ba?\s*grand\b/i, 1000],
+  [/\ba?\s*thousand\b/i, 1000],
+  [/\bcouple\s*(hundred|hundo)\b/i, 200],
+  [/\ba?\s*hundred\b/i, 100],
+  [/\bninety\b/i, 90], [/\beighty\b/i, 80], [/\bseventy\b/i, 70],
+  [/\bsixty\b/i, 60], [/\bfifty\b/i, 50], [/\bforty\b/i, 40],
+  [/\bthirty\b/i, 30], [/\btwenty\b/i, 20],
+  [/\bnineteen\b/i, 19], [/\beighteen\b/i, 18], [/\bseventeen\b/i, 17],
+  [/\bsixteen\b/i, 16], [/\bfifteen\b/i, 15], [/\bfourteen\b/i, 14],
+  [/\bthirteen\b/i, 13], [/\btwelve\b/i, 12], [/\beleven\b/i, 11],
+  [/\bten\b/i, 10], [/\bnine\b/i, 9], [/\beight\b/i, 8],
+  [/\bseven\b/i, 7], [/\bsix\b/i, 6], [/\bfive\b/i, 5],
+  [/\bfour\b/i, 4], [/\bthree\b/i, 3], [/\btwo\b/i, 2], [/\bone\b/i, 1],
+]
+
+function parseWordNumber(text: string): { value: number; confidence: number } | null {
+  const lower = text.toLowerCase()
+
+  // "a few" / "some" → too vague
+  if (/\ba few\b|\bsome\b|\bseveral\b/.test(lower)) return { value: 0, confidence: 0.15 }
+
+  // "forty-nine ninety-nine" style
+  const compoundDecimal = lower.match(/\b(forty|fifty|sixty|seventy|eighty|ninety)?[-\s]?(one|two|three|four|five|six|seven|eight|nine)?\s+(ninety|eighty|seventy|sixty|fifty|forty|thirty|twenty)?[-\s]?(one|two|three|four|five|six|seven|eight|nine)\b/)
+  if (compoundDecimal) {
+    // too complex, low confidence
+    return { value: 0, confidence: 0.3 }
+  }
+
+  for (const [pattern, value] of WORD_NUM_PATTERNS) {
+    if (pattern.test(lower)) {
+      // "couple hundred" is medium confidence; specific numbers are high
+      const confidence = value === 200 && lower.includes('couple') ? 0.6 : 0.75
+      return { value, confidence }
+    }
+  }
+  return null
+}
+
+// ─── Local parser ─────────────────────────────────────────────────────────────
+
+function inferCategory(text: string): { category: Category | null; confidence: number } {
+  const lower = text.toLowerCase()
+  for (const [kws, cat] of CATEGORY_KEYWORDS) {
+    if (kws.some((kw) => lower.includes(kw))) {
+      return { category: cat, confidence: 0.85 }
+    }
+  }
+  return { category: null, confidence: 0 }
+}
+
+function localParse(text: string, type: TransactionType): ParsedExpense & { hasRecurringSignal: boolean; isNegative: boolean; rawText: string } {
   const lower = text.toLowerCase().trim()
 
-  // Extract amount — find first number (handles $50, 50.00, 1,200, etc.)
-  const amountMatch = lower.match(/\$?([\d,]+(?:\.\d{1,2})?)/)
-  const amount = amountMatch ? parseFloat(amountMatch[1].replace(/,/g, '')) : null
+  // ── Negative / refund amount (§1D, §10A) ─────────────────────────────────
+  const isNegative = /minus\s*\d|-\s*\$?\d|\$?-\s*\d|negative\s+\d/.test(lower)
+  const isRefund = REFUND_KEYWORDS.some((k) => lower.includes(k))
+  const detectedType: TransactionType =
+    isNegative || isRefund || INCOME_KEYWORDS.some((k) => lower.includes(k)) ? 'income' : type
 
-  // Remove the amount token to isolate the name portion
-  const withoutAmount = lower.replace(/\$?[\d,]+(?:\.\d{1,2})?/, ' ').trim()
+  // ── Amount extraction ──────────────────────────────────────────────────────
+  // Strip leading minus for parsing
+  const textForAmount = lower.replace(/^-\s*/, '').replace(/minus\s+/, '')
 
-  // Strip filler words to get a clean name
-  const fillerWords = /^(for|on|at|a|an|the|i|spent|paid|bought|got|had)\b/gi
-  const rawName = withoutAmount.replace(fillerWords, '').trim()
-    .replace(/\s+/g, ' ')
+  // Try numeric amount first
+  const numericMatch = textForAmount.match(/\$?([\d,]+(?:\.\d{1,2})?)/)
+  let amount: number | null = null
+  let amountConf = 0
 
-  // Detect frequency keywords
+  if (numericMatch) {
+    amount = parseFloat(numericMatch[1].replace(/,/g, ''))
+    amountConf = amount > 0 ? 0.95 : 0.1 // zero → low confidence (maybe "free")
+  } else {
+    // Try word numbers
+    const wordNum = parseWordNumber(textForAmount)
+    if (wordNum && wordNum.value > 0) {
+      amount = wordNum.value
+      amountConf = wordNum.confidence
+    }
+  }
+
+  // ── Frequency extraction ───────────────────────────────────────────────────
+  // ONLY mark high-confidence when frequency is EXPLICITLY stated (§4B)
   let frequency: Frequency = 'none'
-  let nameWithoutFreq = rawName
+  let freqConf = 0.99 // "none" with high confidence by default
+  let nameWithoutFreq = lower
+
   for (const [kws, freq] of FREQUENCY_KEYWORDS) {
     for (const kw of kws) {
       if (lower.includes(kw)) {
         frequency = freq
-        nameWithoutFreq = nameWithoutFreq.replace(new RegExp(kw, 'gi'), '').trim()
+        freqConf = 0.95
+        nameWithoutFreq = nameWithoutFreq.replace(new RegExp(`\\b${kw}\\b`, 'gi'), '').trim()
         break
       }
     }
     if (frequency !== 'none') break
   }
 
-  // Also treat RECURRING_KEYWORDS as implicit monthly if no frequency stated
-  if (frequency === 'none') {
-    const isRecurring = RECURRING_KEYWORDS.some((k) => lower.includes(k))
-    if (isRecurring) frequency = 'monthly'
-  }
+  // Check for recurring SIGNAL (§4C) — but do NOT auto-assign frequency
+  const hasRecurringSignal = frequency === 'none' &&
+    RECURRING_KEYWORDS.some((k) => lower.includes(k))
 
-  // Detect category
-  let category: Category | null = null
-  for (const [kws, cat] of CATEGORY_KEYWORDS) {
-    if (kws.some((kw) => lower.includes(kw))) {
-      category = cat
-      break
-    }
-  }
-  // Income type override
-  if (type === 'income' && !category) category = 'Income'
+  // ── Name extraction ────────────────────────────────────────────────────────
+  let withoutAmount = nameWithoutFreq
+    .replace(/\$?([\d,]+(?:\.\d{1,2})?)/, ' ')
+    .replace(/\b(minus|negative|plus)\b/gi, '')
+    .trim()
 
-  // Capitalize name properly
-  const name = nameWithoutFreq
-    ? nameWithoutFreq.charAt(0).toUpperCase() + nameWithoutFreq.slice(1)
+  const fillerWords = /\b(for|on|at|a|an|the|i|spent|paid|bought|got|had|used|from|my|some)\b/gi
+  const rawName = withoutAmount.replace(fillerWords, ' ').replace(/\s+/g, ' ').trim()
+
+  const name = rawName && rawName.length > 1
+    ? rawName.charAt(0).toUpperCase() + rawName.slice(1)
     : null
+  const nameConf = name && name.length > 1 ? 0.85 : 0
 
-  // Confidence: high when both name and amount found
-  const amountConf = amount !== null && amount > 0 ? 0.95 : 0
-  const nameConf = name && name.length > 1 ? 0.9 : 0
-  const catConf = category ? 0.85 : 0
+  // ── Category inference ─────────────────────────────────────────────────────
+  const { category, confidence: catConf } = inferCategory(lower)
+  const finalCategory = type === 'income' && !category ? 'Income' : category
 
   return {
-    name: name || null,
+    name,
     amount,
-    type,
-    category,
+    type: detectedType,
+    category: finalCategory,
     frequency,
     tags: [],
     confidence: {
       name: nameConf,
       amount: amountConf,
       category: catConf,
-      frequency: 0.9,
+      frequency: freqConf,
     },
+    hasRecurringSignal,
+    isNegative,
+    rawText: text,
   }
 }
 
-// Returns true when local parse is confident enough to skip the API
 function isLocalConfident(p: ParsedExpense): boolean {
-  return p.confidence.amount >= 0.9 && p.confidence.name >= 0.9
+  return p.confidence.amount >= 0.9 && p.confidence.name >= 0.85
 }
 
-function buildClarificationQueue(parsed: ParsedExpense, _userSelectedType: TransactionType): ClarificationStep[] {
+// ─── Clarification queue builder (spec §CLARIFICATION QUEUE) ─────────────────
+
+function buildClarificationQueue(
+  parsed: ParsedExpense,
+  userSelectedType: TransactionType,
+  hasRecurringSignal: boolean,
+): ClarificationStep[] {
   const steps: ClarificationStep[] = []
 
-  if (!parsed.amount || parsed.confidence.amount < 0.5) {
+  // [1] AMOUNT — ask if missing or very low confidence
+  if (parsed.amount === null || parsed.confidence.amount < 0.5) {
+    const question = parsed.name ? `How much was ${parsed.name}?` : 'How much was this?'
+    steps.push({ field: 'amount', question, options: null })
+  } else if (parsed.amount === 0) {
+    // §1C — zero amount: free or forgot?
     steps.push({
       field: 'amount',
-      question: parsed.name ? `How much was ${parsed.name}?` : 'How much was this?',
-      options: null,
+      question: 'Amount is $0 — is this free or did you forget?',
+      options: [
+        { id: 1, label: 'It was free ($0)', value: '0' },
+        { id: 2, label: 'Let me enter the amount', value: '__ask__' },
+      ],
+    })
+  } else if (parsed.amount > LARGE_AMOUNT_THRESHOLD) {
+    // §1E — very large amount: extra confirmation
+    steps.push({
+      field: 'amount',
+      question: `Just confirming — $${parsed.amount.toLocaleString()} for ${parsed.name ?? 'this'}?`,
+      options: [
+        { id: 1, label: 'Yes, that's right', value: String(parsed.amount) },
+        { id: 2, label: 'No, let me re-enter', value: '__ask__' },
+      ],
     })
   }
 
-  // Skip name question if we already have a confident category — the category
-  // itself is enough context; user can rename later from detail view.
-  const categoryIsObvious = parsed.category && parsed.confidence.category >= 0.7
-  if ((!parsed.name || parsed.confidence.name < 0.5) && !categoryIsObvious) {
+  // [2] NAME — ask if missing or very low confidence
+  if (!parsed.name || parsed.confidence.name < 0.5) {
+    const amountLabel = parsed.amount && parsed.amount > 0
+      ? `$${parsed.amount.toLocaleString()}`
+      : 'this'
     steps.push({
       field: 'name',
-      question: parsed.amount ? `What was the $${parsed.amount} for?` : 'What was this for?',
+      question: `What was the ${amountLabel} for?`,
       options: null,
     })
   }
 
-  if (parsed.confidence.frequency < 0.8 && parsed.frequency !== 'none') {
+  // [3] TYPE — ask if ambiguous and user hasn't explicitly toggled (§3C, §3E)
+  // The user's toggle IS their selection — only ask if type is truly unclear
+  // In practice: we trust the toggle selection passed as `userSelectedType`
+  // but if API detected a different type with high confidence, surface it
+  if (parsed.type && parsed.type !== userSelectedType && parsed.confidence.name < 0.7) {
+    // Only ask if it's genuinely ambiguous — both signals present
+    const looksLikeIncome = INCOME_KEYWORDS.some(k => (parsed.name ?? '').toLowerCase().includes(k))
+    if (looksLikeIncome && userSelectedType === 'expense') {
+      steps.push({
+        field: 'type',
+        question: 'Is this an expense or income?',
+        options: [
+          { id: 1, label: 'Expense (money out)', value: 'expense' },
+          { id: 2, label: 'Income (money in)', value: 'income' },
+        ],
+      })
+    }
+  }
+
+  // [4] FREQUENCY — ONLY ask if recurring signal AND frequency not explicitly stated (§4C)
+  // hasRecurringSignal = recurring keyword in name but no explicit frequency word
+  if (hasRecurringSignal && parsed.confidence.frequency >= 0.99) {
+    // frequency is 'none' with high default confidence → recurring keyword triggered
+    steps.push({
+      field: 'frequency',
+      question: 'Is this a recurring payment?',
+      options: [
+        { id: 1, label: 'Monthly', value: 'monthly' },
+        { id: 2, label: 'Weekly', value: 'weekly' },
+        { id: 3, label: 'No', value: 'none' },
+      ],
+    })
+  } else if (parsed.frequency !== 'none' && parsed.confidence.frequency < 0.8) {
+    // Frequency was detected but with low confidence → confirm
     steps.push({
       field: 'frequency',
       question: 'Is this a frequent expense?',
@@ -137,26 +288,7 @@ function buildClarificationQueue(parsed: ParsedExpense, _userSelectedType: Trans
     })
   }
 
-  // Always confirm frequency for recurring keywords — auto-detection may be wrong
-  const inputHasRecurring = [parsed.name, ...(parsed.tags ?? [])]
-    .filter(Boolean)
-    .some((s) => RECURRING_KEYWORDS.some((k) => s!.toLowerCase().includes(k)))
-  const alreadyAskedFreq = steps.some((s) => s.field === 'frequency')
-  if (inputHasRecurring && !alreadyAskedFreq) {
-    steps.push({
-      field: 'frequency',
-      question: parsed.frequency !== 'none'
-        ? `I'm guessing this is ${parsed.frequency} — correct?`
-        : 'How often does this repeat?',
-      options: [
-        { id: 1, label: 'Monthly', value: 'monthly' },
-        { id: 2, label: 'Weekly', value: 'weekly' },
-        { id: 3, label: 'Yearly', value: 'yearly' },
-        { id: 4, label: 'One-time', value: 'none' },
-      ],
-    })
-  }
-
+  // [5] CATEGORY — ask if confidence < 0.60 (§5C)
   if (!parsed.category || parsed.confidence.category < 0.6) {
     steps.push({
       field: 'category',
@@ -172,23 +304,26 @@ function buildClarificationQueue(parsed: ParsedExpense, _userSelectedType: Trans
     })
   }
 
+  // [6] CONFIRM — always last (§6)
   steps.push({ field: 'confirm', question: '', options: null })
 
   return steps
 }
 
-interface CollectedData {
+// ─── State types ──────────────────────────────────────────────────────────────
+
+export interface CollectedData {
   name: string | null
   amount: number | null
   type: TransactionType
   category: Category | null
   frequency: Frequency
-  tags: string[]
 }
 
 interface UseAIParsingResult {
   isParsing: boolean
   parseError: string | null
+  notExpense: boolean                 // true if input was a question/command
   clarificationQueue: ClarificationStep[]
   currentStepIndex: number
   collectedData: CollectedData
@@ -203,32 +338,47 @@ const DEFAULT_DATA: CollectedData = {
   type: 'expense',
   category: null,
   frequency: 'none',
-  tags: [],
 }
+
+// ─── Hook ──────────────────────────────────────────────────────────────────────
 
 export function useAIParsing(): UseAIParsingResult {
   const [isParsing, setIsParsing] = useState(false)
   const [parseError, setParseError] = useState<string | null>(null)
+  const [notExpense, setNotExpense] = useState(false)
   const [clarificationQueue, setClarificationQueue] = useState<ClarificationStep[]>([])
   const [currentStepIndex, setCurrentStepIndex] = useState(0)
   const [collectedData, setCollectedData] = useState<CollectedData>({ ...DEFAULT_DATA })
+  // Keep original text for recurring-keyword check after API parse
+  const originalTextRef = useRef('')
 
   const reset = useCallback(() => {
     setIsParsing(false)
     setParseError(null)
+    setNotExpense(false)
     setClarificationQueue([])
     setCurrentStepIndex(0)
     setCollectedData({ ...DEFAULT_DATA })
+    originalTextRef.current = ''
   }, [])
 
   const parse = useCallback(async (text: string, type: TransactionType) => {
     if (!text.trim()) return
+
+    // §2E — Detect question/command inputs before doing any parsing
+    if (QUESTION_PATTERNS.some((p) => p.test(text.trim()))) {
+      setNotExpense(true)
+      return
+    }
+    setNotExpense(false)
+
+    originalTextRef.current = text
     setIsParsing(true)
     setParseError(null)
 
-    // Try local parser first — if confident, skip the API entirely
     const local = localParse(text, type)
     let parsed: ParsedExpense
+    let hasRecurringSignal = local.hasRecurringSignal
 
     if (isLocalConfident(local)) {
       parsed = local
@@ -240,19 +390,28 @@ export function useAIParsing(): UseAIParsingResult {
           body: JSON.stringify({ text, type }),
         })
         if (!res.ok) throw new Error('API error')
-        parsed = await res.json() as ParsedExpense
+        const apiResult = await res.json() as ParsedExpense
+        parsed = apiResult
+        // Re-check recurring signal from original text since API may miss it
+        hasRecurringSignal =
+          parsed.frequency === 'none' &&
+          RECURRING_KEYWORDS.some((k) => text.toLowerCase().includes(k))
       } catch {
-        // API unavailable — use whatever local extracted
         parsed = local
       }
     }
 
-    // Handle amount > 999999
-    if (parsed.amount && parsed.amount > 999999) {
-      parsed.confidence.amount = 0.1
+    // §1D — Negative → income/refund
+    if (local.isNegative && parsed.amount !== null) {
+      parsed.amount = Math.abs(parsed.amount)
+      parsed.type = 'income'
     }
 
-    // If category is obvious but no name, default name to category label
+    // §3D — Always trust user toggle for type if they explicitly chose it
+    // (The toggle IS the user's selection, don't override it unless it's income signal)
+    const effectiveType = parsed.type === 'income' ? 'income' : type
+
+    // Fallback name from category if name missing but category obvious
     let derivedName = parsed.name
     if (!derivedName && parsed.category && parsed.confidence.category >= 0.7) {
       derivedName = parsed.category
@@ -261,31 +420,54 @@ export function useAIParsing(): UseAIParsingResult {
     setCollectedData({
       name: derivedName,
       amount: parsed.amount,
-      type: parsed.type ?? type,
+      type: effectiveType,
       category: parsed.category,
       frequency: parsed.frequency ?? 'none',
-      tags: parsed.tags,
     })
 
-    const queue = buildClarificationQueue(parsed, type)
+    const queue = buildClarificationQueue(parsed, effectiveType, hasRecurringSignal)
     setClarificationQueue(queue)
     setCurrentStepIndex(0)
     setIsParsing(false)
   }, [])
 
   const answerStep = useCallback((value: string) => {
-    const step = clarificationQueue[currentStepIndex]
-    if (!step) return
-
     setCollectedData((prev) => {
       const next = { ...prev }
+
+      const step = clarificationQueue[currentStepIndex]
+      if (!step) return prev
+
       switch (step.field) {
-        case 'name':
+        case 'name': {
           next.name = value
+          // §Example C — re-infer category from newly provided name
+          const { category: inferred, confidence } = inferCategory(value)
+          if (inferred && confidence >= 0.75 && !next.category) {
+            next.category = inferred
+            // Remove category step from remaining queue if it exists
+            setClarificationQueue((q) => q.filter((s) => s.field !== 'category'))
+          }
           break
-        case 'amount':
-          next.amount = parseFloat(value.replace(/[^0-9.]/g, ''))
+        }
+        case 'amount': {
+          if (value === '__ask__') {
+            // Replace current step with a free-text numeric input
+            setClarificationQueue((q) => {
+              const newQ = [...q]
+              newQ[currentStepIndex] = {
+                field: 'amount',
+                question: 'How much was this?',
+                options: null,
+              }
+              return newQ
+            })
+            return prev // don't advance index yet
+          }
+          const parsed = parseFloat(value.replace(/[^0-9.]/g, ''))
+          next.amount = isNaN(parsed) ? null : parsed
           break
+        }
         case 'frequency':
           next.frequency = value as Frequency
           break
@@ -296,15 +478,20 @@ export function useAIParsing(): UseAIParsingResult {
           next.type = value as TransactionType
           break
       }
+
       return next
     })
 
-    setCurrentStepIndex((i) => i + 1)
+    // Advance (except __ask__ which returns early above)
+    if (value !== '__ask__') {
+      setCurrentStepIndex((i) => i + 1)
+    }
   }, [clarificationQueue, currentStepIndex])
 
   return {
     isParsing,
     parseError,
+    notExpense,
     clarificationQueue,
     currentStepIndex,
     collectedData,

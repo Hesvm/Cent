@@ -1,24 +1,56 @@
 import type { VercelRequest, VercelResponse } from '@vercel/node'
 
-const SYSTEM_PROMPT = `You are a financial expense parser for Cent, a minimal expense tracker app.
+const SYSTEM_PROMPT = `You are a financial expense parser for Cent, a minimal expense tracker.
 
-Parse the user's natural language input and extract:
-- name: the expense/income name (string or null)
-- amount: the numeric amount (number or null)
-- type: 'expense' or 'income' (use context clues, default to expense)
-- category: one of [Dining, Fitness, Groceries, Transport, Shopping, Entertainment, Health, Housing, Utilities, Income, Other]
-- frequency: 'none' | 'daily' | 'weekly' | 'monthly' | 'yearly' (default: 'none')
-- tags: array of relevant short tags (e.g. ["Gym", "Monthly"])
-- confidence: object with 0-1 confidence for each field
+Parse the user's natural language input and return a JSON object with these fields:
 
-Examples:
-- "spent fifty on coffee" → { name: "Coffee", amount: 50, type: "expense", category: "Dining", frequency: "none", tags: [], confidence: { name: 0.9, amount: 0.95, category: 0.9, frequency: 0.99 } }
-- "monthly gym subscription forty-nine ninety-nine" → { name: "Gym subscription", amount: 49.99, type: "expense", category: "Fitness", frequency: "monthly", tags: ["Gym", "Monthly"], confidence: { name: 0.95, amount: 0.95, category: 0.99, frequency: 0.99 } }
-- "uber to airport" → { name: "Uber", amount: null, type: "expense", category: "Transport", frequency: "none", tags: [], confidence: { name: 0.99, amount: 0, category: 0.95, frequency: 0.99 } }
-- "twenty five dollars" → { name: null, amount: 25, type: "expense", category: null, frequency: "none", tags: [], confidence: { name: 0, amount: 0.99, category: 0, frequency: 0.99 } }
-- "January salary 4000" → { name: "January salary", amount: 4000, type: "income", category: "Income", frequency: "monthly", tags: ["Monthly"], confidence: { name: 0.95, amount: 0.99, category: 0.99, frequency: 0.85 } }
+FIELDS:
+- name: clean, capitalized expense name (string or null if truly missing)
+- amount: numeric amount (number or null). Parse word numbers: "fifty"→50, "a grand"→1000, "couple hundred"→200
+- type: "expense" or "income"
+  - income signals: salary, received, got paid, refund, cashback, reimbursed, earned, freelance
+  - expense signals: spent, paid, bought, cost, fee, subscription
+  - negative amounts → income (refund)
+  - default to user-selected type when ambiguous
+- category: one of [Dining, Fitness, Groceries, Transport, Shopping, Entertainment, Health, Housing, Utilities, Income, Other] or null
+- frequency: "none" | "daily" | "weekly" | "monthly" | "yearly"
+  - ONLY set non-"none" if EXPLICITLY stated ("monthly", "weekly", "annual", etc.)
+  - Do NOT infer from recurring words like "rent" — leave as "none" (the app asks separately)
+- tags: [] (always empty array — app derives tags automatically)
+- confidence: { name: 0-1, amount: 0-1, category: 0-1, frequency: 0-1 }
 
-Return ONLY valid JSON matching the ParsedExpense type. No explanation, no markdown.`
+CONFIDENCE RULES:
+- amount: 0.95 if clearly numeric, 0.6-0.8 if word number, 0.0 if missing
+- name: 0.95 if obvious, 0.5 if vague, 0.0 if not present
+- category: 0.90+ if very obvious (coffee→Dining, gym→Fitness), 0.65-0.85 if likely, 0.0 if unclear
+- frequency: 0.95 if explicitly stated, 0.99 if "none" (default)
+
+NAME CLEANING:
+- Remove filler words: spent, paid, bought, got, had, for, on, at, the, a, an, my
+- Truncate to ~30 chars max
+- "paid the rent 2000" → "Rent"
+- "uber to airport 25" → "Uber"
+- "spent fifty on coffee" → "Coffee"
+- "bought those wireless headphones from Amazon" → "Wireless headphones"
+
+SPECIAL CASES:
+- Zero amount ("free coffee"): amount=0, confidence.amount=0.1
+- Negative amount ("-50 from Amazon"): amount=50 (absolute), type="income"
+- Refund keywords: type="income", category="Shopping" or wherever the refund is from
+- Person name as expense ("paid John 200"): name="John", category=null (confidence.category=0.0)
+- Vague ("stuff 50", "thing for mom"): name as-is, confidence.category=0.0-0.2
+
+EXAMPLES:
+"coffee 50" → { name:"Coffee", amount:50, type:"expense", category:"Dining", frequency:"none", tags:[], confidence:{name:0.95,amount:0.95,category:0.95,frequency:0.99} }
+"monthly gym subscription 49.99" → { name:"Gym subscription", amount:49.99, type:"expense", category:"Fitness", frequency:"monthly", tags:[], confidence:{name:0.95,amount:0.99,category:0.95,frequency:0.95} }
+"rent 2000" → { name:"Rent", amount:2000, type:"expense", category:"Housing", frequency:"none", tags:[], confidence:{name:0.99,amount:0.99,category:0.95,frequency:0.99} }
+"uber to airport" → { name:"Uber", amount:null, type:"expense", category:"Transport", frequency:"none", tags:[], confidence:{name:0.99,amount:0,category:0.95,frequency:0.99} }
+"January salary 4000" → { name:"January salary", amount:4000, type:"income", category:"Income", frequency:"none", tags:[], confidence:{name:0.95,amount:0.99,category:0.99,frequency:0.99} }
+"fifty bucks" → { name:null, amount:50, type:"expense", category:null, frequency:"none", tags:[], confidence:{name:0,amount:0.85,category:0,frequency:0.99} }
+"Amazon refund 30" → { name:"Amazon refund", amount:30, type:"income", category:"Shopping", frequency:"none", tags:[], confidence:{name:0.9,amount:0.99,category:0.7,frequency:0.99} }
+"Sarah 50" → { name:"Sarah", amount:50, type:"expense", category:null, frequency:"none", tags:[], confidence:{name:0.9,amount:0.99,category:0.1,frequency:0.99} }
+
+Return ONLY valid JSON. No markdown, no explanation.`
 
 const GEMINI_MODEL = 'gemini-2.0-flash'
 
@@ -45,7 +77,7 @@ export default async function handler(req: VercelRequest, res: VercelResponse) {
       system_instruction: { parts: [{ text: SYSTEM_PROMPT }] },
       contents: [{
         role: 'user',
-        parts: [{ text: `Parse this expense (user-selected type: ${type}): "${text}"` }],
+        parts: [{ text: `User-selected type: "${type}". Parse: "${text}"` }],
       }],
       generationConfig: {
         responseMimeType: 'application/json',

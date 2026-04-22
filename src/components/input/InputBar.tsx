@@ -69,17 +69,22 @@ export function InputBar() {
   const currentStep = ai.clarificationQueue[ai.currentStepIndex]
   const isConfirming = currentStep?.field === 'confirm'
 
-  // When clarification step is 'amount', show the price wheel instead
-  const isAskingAmount = currentStep?.field === 'amount' && !isConfirming
+  // When clarification step is a plain amount input (no options) → show price wheel
+  // Special amount steps (zero/large) have options, so they use ClarificationSheet
+  const isAskingAmount = currentStep?.field === 'amount' && !currentStep?.options && !isConfirming
+
+  // §2E — show "not an expense" toast when question/command detected
+  useEffect(() => {
+    if (ai.notExpense) {
+      showToast("I can only log expenses. Try: 'Coffee $5' or 'Gym 50'")
+      ai.reset()
+      setInputState('idle')
+    }
+  }, [ai.notExpense]) // eslint-disable-line react-hooks/exhaustive-deps
 
   const submit = useCallback(
     async (value: string, type: TransactionType) => {
       if (!value.trim()) return
-      const numMatch = value.match(/\d+(\.\d+)?/)
-      if (numMatch && parseFloat(numMatch[0]) === 0) {
-        showToast("Amount can't be zero")
-        return
-      }
       setInputState('parsing')
       await ai.parse(value, type)
       setInputState('clarifying')
