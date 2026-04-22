@@ -24,7 +24,7 @@ export default {
           icon: '#D32F2F',
         },
         send: '#E8403A',
-        divider: '#D9D9D4',
+        divider: '#E3E3DE',
         border: '#E5E5E5',
       },
       fontFamily: {
