@@ -1,76 +1,112 @@
-import { useState } from 'react'
+import { useState, useEffect } from 'react'
 import { useExpense } from '../../context/MockExpenseContext'
-import { formatAmount } from '../../utils/formatCurrency'
-import { BudgetModal } from './BudgetModal'
+import { getHeaderState, formatHeaderNumber } from '../../context/MockExpenseContext'
+import { SpendingSheet } from './SpendingSheet'
 import { AboutSheet } from './AboutSheet'
 
-const BUDGET = 6000 // monthly budget baseline
-
-function BudgetRing({ balance, budget }: { balance: number; budget: number }) {
-  const used = Math.max(0, budget - balance)
-  const ratio = Math.min(1, used / budget)
-
-  // Color: 0–0.6 green, 0.6–0.85 yellow, 0.85+ red
-  let strokeColor: string
-  if (ratio < 0.6) {
-    // green → yellow interpolation
-    const t = ratio / 0.6
-    const r = Math.round(46 + (234 - 46) * t)
-    const g = Math.round(125 + (179 - 125) * t)
-    const b = Math.round(50 + (8 - 50) * t)
-    strokeColor = `rgb(${r},${g},${b})`
-  } else if (ratio < 0.85) {
-    // yellow → orange
-    const t = (ratio - 0.6) / 0.25
-    const r = Math.round(234 + (211 - 234) * t)
-    const g = Math.round(179 + (47 - 179) * t)
-    const b = Math.round(8 + (47 - 8) * t)
-    strokeColor = `rgb(${r},${g},${b})`
-  } else {
-    // red
-    strokeColor = '#D32F2F'
-  }
-
-  const SIZE = 22
-  const STROKE = 3
+// ─── Budget ring (pill size: 20px, 2.5px stroke) ─────────────────────────────
+function BudgetRing({ percent, color, isSolidRed }: { percent: number; color: string; isSolidRed: boolean }) {
+  const SIZE = 20
+  const STROKE = 2.5
   const R = (SIZE - STROKE) / 2
   const CIRC = 2 * Math.PI * R
-  // offset = full circumference means nothing drawn (0% spent); 0 means full circle (100% spent)
-  const dashoffset = CIRC * (1 - ratio)
+
+  if (isSolidRed) {
+    return (
+      <svg width={SIZE} height={SIZE} viewBox={`0 0 ${SIZE} ${SIZE}`} className="flex-shrink-0">
+        <circle cx={SIZE / 2} cy={SIZE / 2} r={SIZE / 2} fill="#D32F2F" />
+      </svg>
+    )
+  }
+
+  // percent = remaining (1 = full circle, 0 = empty)
+  const dashoffset = CIRC * (1 - percent)
 
   return (
     <svg width={SIZE} height={SIZE} viewBox={`0 0 ${SIZE} ${SIZE}`} className="flex-shrink-0">
-      {/* Track */}
+      <circle cx={SIZE / 2} cy={SIZE / 2} r={R} fill="none" stroke="#E0E0E0" strokeWidth={STROKE} />
       <circle
         cx={SIZE / 2} cy={SIZE / 2} r={R}
-        fill="none"
-        stroke="#D8D8D8"
-        strokeWidth={STROKE}
-      />
-      {/* Progress — starts at top (rotate -90), fills clockwise as spending increases */}
-      <circle
-        cx={SIZE / 2} cy={SIZE / 2} r={R}
-        fill="none"
-        stroke={strokeColor}
-        strokeWidth={STROKE}
+        fill="none" stroke={color} strokeWidth={STROKE}
         strokeLinecap="round"
-        strokeDasharray={CIRC}
-        strokeDashoffset={dashoffset}
+        strokeDasharray={CIRC} strokeDashoffset={dashoffset}
         transform={`rotate(-90 ${SIZE / 2} ${SIZE / 2})`}
-        style={{ transition: 'stroke-dashoffset 0.6s cubic-bezier(0.4,0,0.2,1), stroke 0.6s cubic-bezier(0.4,0,0.2,1)' }}
+        style={{ transition: 'stroke-dashoffset 0.6s cubic-bezier(0.4,0,0.2,1), stroke 0.6s ease' }}
       />
     </svg>
   )
 }
 
+// ─── Carousel (no budget, no transactions) ────────────────────────────────────
+function PillCarousel({ onSetBudget }: { onSetBudget: () => void }) {
+  const [slide, setSlide] = useState(0) // 0 = $0, 1 = "Set a budget"
+  const [animating, setAnimating] = useState(false)
+
+  useEffect(() => {
+    const durations = [3000, 2000]
+    const timer = setTimeout(() => {
+      setAnimating(true)
+      setTimeout(() => {
+        setSlide((s) => (s + 1) % 2)
+        setAnimating(false)
+      }, 300)
+    }, durations[slide])
+    return () => clearTimeout(timer)
+  }, [slide, animating])
+
+  const sparkleStyle: React.CSSProperties = {
+    display: 'inline-block',
+    animation: 'sparkle-pulse 1.5s ease-in-out infinite',
+  }
+
+  return (
+    <div style={{ overflow: 'hidden', height: 22, display: 'flex', alignItems: 'center' }}>
+      <style>{`
+        @keyframes sparkle-pulse { 0%,100%{transform:scale(1)} 50%{transform:scale(1.15)} }
+        @keyframes slide-up-out { from{transform:translateY(0);opacity:1} to{transform:translateY(-100%);opacity:0} }
+        @keyframes slide-up-in  { from{transform:translateY(100%);opacity:0} to{transform:translateY(0);opacity:1} }
+      `}</style>
+      <div
+        key={slide}
+        style={{
+          animation: animating ? 'slide-up-out 300ms ease-in-out forwards' : 'slide-up-in 300ms ease-in-out forwards',
+          display: 'flex', alignItems: 'center', gap: 4,
+        }}
+      >
+        {slide === 0 ? (
+          <span className="text-[15px] font-semibold text-text-primary font-rounded">$0</span>
+        ) : (
+          <button onClick={onSetBudget} className="flex items-center gap-1">
+            <span style={sparkleStyle}>✨</span>
+            <span className="text-[13px] font-medium text-text-primary font-rounded">Set a budget</span>
+          </button>
+        )}
+      </div>
+    </div>
+  )
+}
+
+// ─── Header ───────────────────────────────────────────────────────────────────
 export function Header() {
-  const { balance } = useExpense()
-  const [showBudget, setShowBudget] = useState(false)
+  const { transactions, budget } = useExpense()
+  const [showSpending, setShowSpending] = useState(false)
   const [showAbout, setShowAbout] = useState(false)
+  const [scrollToSettings, setScrollToSettings] = useState(false)
+
+  const hs = getHeaderState(transactions, budget)
+
+  const numberColor = hs.has_budget
+    ? (hs.is_solid_red ? '#D32F2F' : hs.circle_color)
+    : '#1A1A1A'
+
+  function openBudgetSettings() {
+    setScrollToSettings(true)
+    setShowSpending(true)
+  }
 
   return (
     <header className="flex items-center justify-between px-4 py-3 bg-bg-page z-10">
-      {/* Cent logo — tap for About */}
+      {/* Logo */}
       <button
         onClick={() => setShowAbout(true)}
         className="w-[42px] h-[42px] rounded-2xl overflow-hidden flex-shrink-0 hover:opacity-80 transition-opacity active:scale-95"
@@ -78,15 +114,25 @@ export function Header() {
         <img src="/cent-logo.svg" alt="Cent" className="w-full h-full object-cover" />
       </button>
 
-      {/* Balance pill — tap to see breakdown */}
+      {/* Pill */}
       <button
-        onClick={() => setShowBudget(true)}
+        onClick={() => { setScrollToSettings(false); setShowSpending(true) }}
         className="flex items-center gap-2 bg-white rounded-pill px-4 py-2 float-shadow hover:bg-gray-50 transition-colors"
       >
-        <BudgetRing balance={balance} budget={BUDGET} />
-        <span className="text-[15px] font-semibold text-text-primary whitespace-nowrap font-rounded">
-          ${formatAmount(Math.max(0, balance))} left
-        </span>
+        {hs.has_budget && (
+          <BudgetRing percent={hs.circle_percent} color={hs.circle_color} isSolidRed={hs.is_solid_red} />
+        )}
+
+        {hs.show_carousel ? (
+          <PillCarousel onSetBudget={openBudgetSettings} />
+        ) : (
+          <span
+            className="text-[15px] font-semibold font-rounded tabular-nums whitespace-nowrap"
+            style={{ color: numberColor }}
+          >
+            {hs.is_negative ? '-' : ''}{formatHeaderNumber(hs.display_number)}
+          </span>
+        )}
       </button>
 
       {/* Action buttons */}
@@ -112,7 +158,12 @@ export function Header() {
         </button>
       </div>
 
-      {showBudget && <BudgetModal budget={BUDGET} onClose={() => setShowBudget(false)} />}
+      {showSpending && (
+        <SpendingSheet
+          onClose={() => setShowSpending(false)}
+          initialScrollToSettings={scrollToSettings}
+        />
+      )}
       {showAbout && <AboutSheet onClose={() => setShowAbout(false)} />}
     </header>
   )
