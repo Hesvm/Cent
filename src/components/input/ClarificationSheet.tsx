@@ -36,7 +36,7 @@ export function ClarificationSheet({ step, onAnswer, onDismiss: _onDismiss }: Cl
 
   return (
     <div
-      className={`mx-2 mb-2 rounded-3xl border border-[#E3E3E2] bg-white px-5 py-4 transition-all ${
+      className={`mx-2 mb-2 rounded-3xl border border-[#D9D9D4] bg-white px-5 py-4 transition-all ${
         visible ? 'animate-clarify-up' : 'animate-clarify-down opacity-0'
       }`}
     >
