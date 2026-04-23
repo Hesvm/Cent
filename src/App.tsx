@@ -1,3 +1,4 @@
+import { Analytics } from '@vercel/analytics/react'
 import { MockExpenseProvider } from './context/MockExpenseContext'
 import { Header } from './components/layout/Header'
 import { TransactionList } from './components/transactions/TransactionList'
@@ -12,6 +13,7 @@ export default function App() {
         <TransactionList />
         <InputBar />
         <UndoToast />
+        <Analytics />
       </div>
     </MockExpenseProvider>
   )
