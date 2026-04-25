@@ -1,5 +1,5 @@
 import { useState, useRef, useEffect, useCallback } from 'react'
-import { ScanBarcode, ArrowUp } from 'iconsax-react'
+import { ScanBarcode } from 'iconsax-react'
 import type { TransactionType, InputState } from '../../types'
 import { useVoiceInput } from '../../hooks/useVoiceInput'
 import { useAIParsing } from '../../hooks/useAIParsing'
@@ -429,14 +429,46 @@ export function InputBar() {
               />
 
               {isTyping && (
-                <button
-                  onClick={handleSend}
-                  className={`w-10 h-10 rounded-full flex items-center justify-center flex-shrink-0 animate-scale-in transition-colors ${
-                    selectedType === 'income' ? 'bg-income hover:bg-green-700' : 'bg-send hover:bg-red-600'
-                  }`}
-                  aria-label="Send"
-                >
-                  <ArrowUp size={15} variant="Bold" color="white" />
+                <button onClick={handleSend} aria-label="Send" className="flex-shrink-0 animate-scale-in">
+                  {selectedType === 'income' ? (
+                    <svg width="40" height="40" viewBox="0 0 30 30" fill="none" xmlns="http://www.w3.org/2000/svg">
+                      <g filter="url(#income_shadow)">
+                        <rect width="30" height="30" rx="15" fill="#32B250"/>
+                        <path d="M15.5 9L10 14.168M15.5 9L21 14.168M15.5 9V21" stroke="white" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round"/>
+                      </g>
+                      <defs>
+                        <filter id="income_shadow" x="0" y="0" width="30" height="32.5385" filterUnits="userSpaceOnUse" colorInterpolationFilters="sRGB">
+                          <feFlood floodOpacity="0" result="BackgroundImageFix"/>
+                          <feBlend mode="normal" in="SourceGraphic" in2="BackgroundImageFix" result="shape"/>
+                          <feColorMatrix in="SourceAlpha" type="matrix" values="0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 127 0" result="hardAlpha"/>
+                          <feOffset dy="2.53846"/>
+                          <feGaussianBlur stdDeviation="1.96731"/>
+                          <feComposite in2="hardAlpha" operator="arithmetic" k2="-1" k3="1"/>
+                          <feColorMatrix type="matrix" values="0 0 0 0 1 0 0 0 0 1 0 0 0 0 1 0 0 0 0.35 0"/>
+                          <feBlend mode="normal" in2="shape" result="effect1_innerShadow"/>
+                        </filter>
+                      </defs>
+                    </svg>
+                  ) : (
+                    <svg width="40" height="40" viewBox="0 0 30 30" fill="none" xmlns="http://www.w3.org/2000/svg">
+                      <g filter="url(#expense_shadow)">
+                        <rect width="30" height="30" rx="15" fill="#E02F44"/>
+                        <path d="M15.5 9L10 14.168M15.5 9L21 14.168M15.5 9V21" stroke="white" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round"/>
+                      </g>
+                      <defs>
+                        <filter id="expense_shadow" x="0" y="0" width="30" height="32.5385" filterUnits="userSpaceOnUse" colorInterpolationFilters="sRGB">
+                          <feFlood floodOpacity="0" result="BackgroundImageFix"/>
+                          <feBlend mode="normal" in="SourceGraphic" in2="BackgroundImageFix" result="shape"/>
+                          <feColorMatrix in="SourceAlpha" type="matrix" values="0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 127 0" result="hardAlpha"/>
+                          <feOffset dy="2.53846"/>
+                          <feGaussianBlur stdDeviation="1.96731"/>
+                          <feComposite in2="hardAlpha" operator="arithmetic" k2="-1" k3="1"/>
+                          <feColorMatrix type="matrix" values="0 0 0 0 1 0 0 0 0 1 0 0 0 0 1 0 0 0 0.35 0"/>
+                          <feBlend mode="normal" in2="shape" result="effect1_innerShadow"/>
+                        </filter>
+                      </defs>
+                    </svg>
+                  )}
                 </button>
               )}
 

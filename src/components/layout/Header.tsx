@@ -108,7 +108,7 @@ export function Header() {
   }
 
   return (
-    <header className="flex items-center justify-between px-4 py-3 bg-bg-page z-10">
+    <header className="relative flex items-center justify-between px-4 py-3 bg-bg-page z-10">
       {/* Logo */}
       <button
         onClick={() => setShowAbout(true)}
@@ -117,26 +117,28 @@ export function Header() {
         <img src="/cent-logo.svg" alt="Cent" className="w-full h-full object-cover" />
       </button>
 
-      {/* Pill */}
-      <button
-        onClick={() => { setScrollToSettings(false); setShowSpending(true) }}
-        className="flex items-center gap-2 bg-bg-card rounded-pill px-4 py-2 float-shadow hover:bg-bg-secondary transition-colors"
-      >
-        {hs.has_budget && (
-          <BudgetRing percent={hs.circle_percent} color={hs.circle_color} isSolidRed={hs.is_solid_red} />
-        )}
+      {/* Pill — absolutely centered so it's always in the middle regardless of side widths */}
+      <div className="absolute inset-x-0 flex justify-center pointer-events-none">
+        <button
+          onClick={() => { setScrollToSettings(false); setShowSpending(true) }}
+          className="flex items-center gap-2 bg-bg-card rounded-pill px-4 py-2 float-shadow hover:bg-bg-secondary transition-colors pointer-events-auto"
+        >
+          {hs.has_budget && (
+            <BudgetRing percent={hs.circle_percent} color={hs.circle_color} isSolidRed={hs.is_solid_red} />
+          )}
 
-        {hs.show_carousel ? (
-          <PillCarousel onSetBudget={openBudgetSettings} />
-        ) : (
-          <span
-            className="text-[15px] font-semibold font-rounded tabular-nums whitespace-nowrap"
-            style={{ color: numberColor }}
-          >
-            {hs.is_negative ? '-' : ''}{formatHeaderNumber(hs.display_number)}{hs.has_budget && !hs.is_negative ? ' left' : ''}
-          </span>
-        )}
-      </button>
+          {hs.show_carousel ? (
+            <PillCarousel onSetBudget={openBudgetSettings} />
+          ) : (
+            <span
+              className="text-[15px] font-semibold font-rounded tabular-nums whitespace-nowrap"
+              style={{ color: numberColor }}
+            >
+              {hs.is_negative ? '-' : ''}{formatHeaderNumber(hs.display_number)}{hs.has_budget && !hs.is_negative ? ' left' : ''}
+            </span>
+          )}
+        </button>
+      </div>
 
       {/* Action buttons */}
       <div className="flex items-center gap-2">

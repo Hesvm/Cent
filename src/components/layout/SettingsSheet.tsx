@@ -1,5 +1,6 @@
 import { useState, useEffect, useRef } from 'react'
 import { motion, AnimatePresence } from 'motion/react'
+import { useUser, useClerk } from '@clerk/clerk-react'
 import {
   Setting2, Profile, Wallet2, DollarCircle, Moon, Notification,
   Category2, ExportSquare, InfoCircle, ArrowRight2, ArrowLeft2,
@@ -112,12 +113,19 @@ function Toggle({ on, onChange, disabled }: { on: boolean; onChange: (v: boolean
 
 // ─── PROFILE page ─────────────────────────────────────────────────────────────
 function ProfilePage({ onBack }: { onBack: () => void }) {
-  const [name, setName] = useState('Hesam')
+  const { user } = useUser()
+  const originalName = user?.firstName ?? ''
+  const [name, setName] = useState(originalName)
   const [saved, setSaved] = useState(false)
-  const originalName = 'Hesam'
   const isDirty = name !== originalName
 
-  function handleSave() {
+  const email = user?.primaryEmailAddress?.emailAddress ?? ''
+  const memberSince = user?.createdAt
+    ? new Date(user.createdAt).toLocaleDateString('en-US', { month: 'long', year: 'numeric' })
+    : ''
+
+  async function handleSave() {
+    await user?.update({ firstName: name })
     setSaved(true)
     setTimeout(() => setSaved(false), 1500)
   }
@@ -133,7 +141,7 @@ function ProfilePage({ onBack }: { onBack: () => void }) {
           display: 'flex', alignItems: 'center', justifyContent: 'center',
           fontSize: 28, fontWeight: 700, color: '#fff',
         }} className="font-rounded">
-          {name.charAt(0).toUpperCase()}
+          {(name || email).charAt(0).toUpperCase()}
         </div>
 
         {/* Name input */}
@@ -149,13 +157,13 @@ function ProfilePage({ onBack }: { onBack: () => void }) {
         {/* Email read-only */}
         <div className="w-full">
           <label className="text-[12px] text-text-tertiary font-rounded font-semibold tracking-[0.6px] uppercase mb-1 block">Email</label>
-          <p className="text-[15px] font-rounded pb-2 border-b border-bg-secondary" style={{ color: 'var(--color-text-secondary)' }}>hesam@gmail.com</p>
+          <p className="text-[15px] font-rounded pb-2 border-b border-bg-secondary" style={{ color: 'var(--color-text-secondary)' }}>{email}</p>
         </div>
 
         {/* Member since read-only */}
         <div className="w-full">
           <label className="text-[12px] text-text-tertiary font-rounded font-semibold tracking-[0.6px] uppercase mb-1 block">Member Since</label>
-          <p className="text-[15px] font-rounded pb-2 border-b border-bg-secondary" style={{ color: 'var(--color-text-secondary)' }}>January 2025</p>
+          <p className="text-[15px] font-rounded pb-2 border-b border-bg-secondary" style={{ color: 'var(--color-text-secondary)' }}>{memberSince}</p>
         </div>
 
         {/* Save button — slides in only when dirty */}
@@ -259,12 +267,15 @@ const ALL_CURRENCIES = [
 ]
 
 function CurrencyPage({ onBack }: { onBack: () => void }) {
-  const [selected, setSelected] = useState(() => localStorage.getItem('cent_currency') || 'USD')
+  const { user } = useUser()
+  const meta = user?.unsafeMetadata as Record<string, unknown> | undefined
+  const [selected, setSelected] = useState(() => (meta?.currency as string) || localStorage.getItem('cent_currency') || 'USD')
   const [search, setSearch] = useState('')
 
-  function handleSelect(code: string) {
+  async function handleSelect(code: string) {
     setSelected(code)
     localStorage.setItem('cent_currency', code)
+    await user?.update({ unsafeMetadata: { ...meta, currency: code } })
     setTimeout(onBack, 300)
   }
 
@@ -417,8 +428,12 @@ const DEFAULT_NOTIF: NotifState = {
 }
 
 function NotificationsPage({ onBack }: { onBack: () => void }) {
+  const { user } = useUser()
+  const meta = user?.unsafeMetadata as Record<string, unknown> | undefined
   const [state, setState] = useState<NotifState>(() => {
     try {
+      const fromMeta = meta?.notifications
+      if (fromMeta) return { ...DEFAULT_NOTIF, ...(fromMeta as object) }
       const stored = localStorage.getItem('cent_notifications')
       return stored ? { ...DEFAULT_NOTIF, ...JSON.parse(stored) } : DEFAULT_NOTIF
     } catch {
@@ -426,10 +441,11 @@ function NotificationsPage({ onBack }: { onBack: () => void }) {
     }
   })
 
-  function toggle(key: NotifKey) {
+  async function toggle(key: NotifKey) {
     const next = { ...state, [key]: !state[key] }
     setState(next)
     localStorage.setItem('cent_notifications', JSON.stringify(next))
+    await user?.update({ unsafeMetadata: { ...meta, notifications: next } })
   }
 
   const masterOff = !state.master
@@ -506,8 +522,12 @@ function NotificationsPage({ onBack }: { onBack: () => void }) {
 
 // ─── CATEGORIES page ──────────────────────────────────────────────────────────
 function CategoriesPage({ onBack }: { onBack: () => void }) {
+  const { user } = useUser()
+  const meta = user?.unsafeMetadata as Record<string, unknown> | undefined
   const [custom, setCustom] = useState<string[]>(() => {
     try {
+      const fromMeta = meta?.customCategories
+      if (Array.isArray(fromMeta)) return fromMeta as string[]
       const stored = localStorage.getItem('cent_custom_categories')
       return stored ? JSON.parse(stored) : []
     } catch {
@@ -517,20 +537,22 @@ function CategoriesPage({ onBack }: { onBack: () => void }) {
   const [newCat, setNewCat] = useState('')
   const [confirmDelete, setConfirmDelete] = useState<string | null>(null)
 
-  function addCategory() {
+  async function addCategory() {
     const trimmed = newCat.trim()
     if (!trimmed || custom.includes(trimmed)) return
     const next = [...custom, trimmed]
     setCustom(next)
     localStorage.setItem('cent_custom_categories', JSON.stringify(next))
+    await user?.update({ unsafeMetadata: { ...meta, customCategories: next } })
     setNewCat('')
   }
 
-  function deleteCategory(name: string) {
+  async function deleteCategory(name: string) {
     if (confirmDelete === name) {
       const next = custom.filter((c) => c !== name)
       setCustom(next)
       localStorage.setItem('cent_custom_categories', JSON.stringify(next))
+      await user?.update({ unsafeMetadata: { ...meta, customCategories: next } })
       setConfirmDelete(null)
     } else {
       setConfirmDelete(name)
@@ -816,6 +838,7 @@ function AboutPage({ onBack }: { onBack: () => void }) {
 
 // ─── Sheet ────────────────────────────────────────────────────────────────────
 export function SettingsSheet({ onClose, onOpenBudget }: Props) {
+  const { signOut } = useClerk()
   const [showLogoutConfirm, setShowLogoutConfirm] = useState(false)
   const [activePage, setActivePage] = useState<Page | null>(null)
   const sheetRef = useRef<HTMLDivElement>(null)
@@ -941,7 +964,7 @@ export function SettingsSheet({ onClose, onOpenBudget }: Props) {
                 <div className="flex gap-2">
                   <button
                     className="flex-1 py-2.5 rounded-pill text-[14px] font-semibold font-rounded text-white bg-expense"
-                    onClick={() => { localStorage.clear(); window.location.reload() }}
+                    onClick={() => signOut()}
                   >
                     Yes, log out
                   </button>
