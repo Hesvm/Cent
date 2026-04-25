@@ -31,11 +31,96 @@
   font-display: swap;
 }
 
+/* ─── LIGHT MODE COLOR TOKENS ──────────────────────────────────────────────── */
+:root {
+  --color-bg-page:         #FBFBF8;
+  --color-bg-card:         #FFFFFF;
+  --color-bg-elevated:     #FFFFFF;
+  --color-bg-secondary:    #F5F5F5;
+  --color-bg-tertiary:     #EBEBEB;
+
+  --color-text-primary:    #1A1A1A;
+  --color-text-secondary:  #888888;
+  --color-text-tertiary:   #AAAAAA;
+  --color-text-hint:       #CCCCCC;
+
+  --color-border:          #E5E5E5;
+  --color-border-emphasis: #D0D0D0;
+  --color-border-dashed:   #E0E0E0;
+
+  --color-expense:         #D32F2F;
+  --color-income:          #2E7D32;
+  --color-send-btn:        #E8403A;
+
+  --color-green-progress:  #4CAF50;
+  --color-yellow-progress: #F9A825;
+  --color-orange-progress: #FF6D00;
+  --color-red-progress:    #D32F2F;
+
+  /* Toggle colors for light mode */
+  --toggle-on-bg:          #1A1A1A;
+  --toggle-off-bg:         #DDDDDD;
+  --toggle-on-thumb:       #FFFFFF;
+  --toggle-off-thumb:      #FFFFFF;
+
+  /* Sheet drag handle — mirrors UIColor.tertiaryLabel */
+  --grabber-color:         rgba(60, 60, 67, 0.36);
+}
+
+/* ─── DARK MODE COLOR TOKENS ──────────────────────────────────────────────── */
+.dark {
+  --color-bg-page:         #171717;
+  --color-bg-card:         #1F1F1F;
+  --color-bg-elevated:     #282828;
+  --color-bg-secondary:    #242424;
+  --color-bg-tertiary:     #2E2E2E;
+
+  --color-text-primary:    #F0F0F0;
+  --color-text-secondary:  #909090;
+  --color-text-tertiary:   #606060;
+  --color-text-hint:       #404040;
+
+  --color-border:          #2E2E2E;
+  --color-border-emphasis: #383838;
+  --color-border-dashed:   #2E2E2E;
+
+  --color-expense:         #EF5350;
+  --color-income:          #66BB6A;
+  --color-send-btn:        #EF5350;
+
+  --color-green-progress:  #66BB6A;
+  --color-yellow-progress: #FFCA28;
+  --color-orange-progress: #FFA726;
+  --color-red-progress:    #EF5350;
+
+  /* Toggle colors for dark mode */
+  --toggle-on-bg:          #F0F0F0;
+  --toggle-off-bg:         #383838;
+  --toggle-on-thumb:       #1A1A1A;
+  --toggle-off-thumb:      #606060;
+
+  /* Sheet drag handle — mirrors UIColor.tertiaryLabel dark */
+  --grabber-color:         rgba(235, 235, 245, 0.36);
+}
+
 @layer base {
   body {
     @apply bg-bg-page font-rounded text-text-primary;
     -webkit-font-smoothing: antialiased;
     -moz-osx-font-smoothing: grayscale;
+  }
+
+  /* Global color transitions for smooth theme switching */
+  *,
+  *::before,
+  *::after {
+    @apply transition-colors duration-200;
+  }
+
+  /* Exceptions: elements with animations should not transition colors */
+  .no-transition,
+  .no-transition * {
+    @apply !transition-none;
   }
 }
 
@@ -51,10 +136,22 @@
   }
 }
 
+/* Hide scrollbar while keeping scroll behaviour */
+.no-scrollbar {
+  -ms-overflow-style: none;
+  scrollbar-width: none;
+}
+.no-scrollbar::-webkit-scrollbar {
+  display: none;
+}
+
 /* Dashed divider */
 .dashed-divider {
   border-top: 1px dashed #E3E3DE;
   margin-left: 52px;
+}
+.dark .dashed-divider {
+  border-top-color: #2E2E2E;
 }
 
 /* Floating surface shadow — soft, elevated */
@@ -180,3 +277,67 @@
   object-fit: contain;
   flex-shrink: 0;
 }
+
+/* Budget danger box (overspent / confirm remove) */
+.budget-danger-bg {
+  background: #FFF3F3;
+  border: 1px solid rgba(211, 47, 47, 0.2);
+}
+.dark .budget-danger-bg {
+  background: rgba(239, 83, 80, 0.08);
+  border: 1px solid rgba(239, 83, 80, 0.25);
+}
+
+/* ─── DARK MODE OVERRIDES ─────────────────────────────────────────────────── */
+/* Explicit class overrides — reliable across all Tailwind versions */
+.dark .bg-white                { background-color: #1F1F1F !important; }
+.dark .bg-bg-page              { background-color: #171717 !important; }
+.dark .bg-bg-card              { background-color: #1F1F1F !important; }
+.dark .bg-bg-elevated          { background-color: #282828 !important; }
+.dark .bg-bg-secondary         { background-color: #242424 !important; }
+.dark .bg-bg-tag               { background-color: #2E2E2E !important; }
+.dark .hover\:bg-gray-50:hover { background-color: #242424 !important; }
+.dark .hover\:bg-bg-secondary:hover { background-color: #2A2A2A !important; }
+
+/* Text color overrides */
+.dark .text-text-primary       { color: #F0F0F0 !important; }
+.dark .text-text-secondary     { color: #909090 !important; }
+.dark .text-text-tertiary      { color: #606060 !important; }
+.dark .text-text-hint          { color: #404040 !important; }
+
+/* Border overrides */
+.dark .border-bg-secondary     { border-color: #2E2E2E !important; }
+.dark .border-divider          { border-color: #2E2E2E !important; }
+.dark .bg-divider              { background-color: #2E2E2E !important; }
+
+/* Shadows → invisible in dark mode, use borders instead */
+.dark .float-shadow    { box-shadow: 0 0 0 1px rgba(255,255,255,0.06); }
+.dark .float-shadow-sm { box-shadow: 0 0 0 1px rgba(255,255,255,0.05); }
+
+/* Skeleton shimmer in dark mode */
+.dark .shimmer {
+  background: linear-gradient(90deg, #242424 25%, #2E2E2E 50%, #242424 75%);
+  background-size: 200% 100%;
+}
+
+/* Wheel picker in dark */
+.dark .wheel-item.selected { color: #F0F0F0; }
+.dark .dashed-divider { border-top-color: #2E2E2E; }
+
+/* Insight card border */
+.dark .border-\[\#E3E3DE\] { border-color: #2E2E2E !important; }
+
+/* Detail/clarification cards bg-[#F8F8F8] */
+.dark .bg-\[\#F8F8F8\]     { background-color: #242424 !important; }
+.dark .bg-\[\#F5F5F5\]     { background-color: #242424 !important; }
+.dark .bg-\[\#F4F4F3\]     { background-color: #2E2E2E !important; }
+
+/* Inverted primary buttons (bg-text-primary / bg-[#1A1A1A]) in dark mode */
+.dark .bg-text-primary     { background-color: #F0F0F0 !important; }
+.dark .bg-\[\#1A1A1A\]     { background-color: #F0F0F0 !important; }
+/* Force text to dark on inverted buttons */
+.dark .bg-text-primary, .dark .bg-text-primary *,
+.dark .bg-\[\#1A1A1A\], .dark .bg-\[\#1A1A1A\] * { color: #1A1A1A !important; }
+
+/* hover:bg-gray-50 → darkened surface in dark mode */
+.dark .hover\:bg-gray-50:hover { background-color: #282828 !important; }

@@ -1,25 +1,27 @@
 import { useState, useEffect } from 'react'
-import { getImageSlug, getImageUrl, preloadAndCache } from '../../utils/transactionImages'
+import { getCategorySlug, getImageUrl, preloadAndCache } from '../../utils/transactionImages'
 
 interface TransactionImageProps {
-  category: string
+  category: string | null
   name: string
   size?: number
 }
 
 export function TransactionImage({ category, name, size = 36 }: TransactionImageProps) {
-  const slug = getImageSlug(category, name)
+  const slug = getCategorySlug(category, name)
   const fallbackUrl = getImageUrl(slug)
   const [src, setSrc] = useState<string>(fallbackUrl)
   const [loaded, setLoaded] = useState(false)
 
   useEffect(() => {
     let cancelled = false
+    setSrc(fallbackUrl)
+    setLoaded(false)
     preloadAndCache(slug).then((url) => {
       if (!cancelled) setSrc(url)
     })
     return () => { cancelled = true }
-  }, [slug])
+  }, [slug, fallbackUrl])
 
   return (
     <div

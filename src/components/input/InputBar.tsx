@@ -1,13 +1,155 @@
 import { useState, useRef, useEffect, useCallback } from 'react'
+import { ScanBarcode, ArrowUp } from 'iconsax-react'
 import type { TransactionType, InputState } from '../../types'
 import { useVoiceInput } from '../../hooks/useVoiceInput'
 import { useAIParsing } from '../../hooks/useAIParsing'
-import { useExpense } from '../../context/MockExpenseContext'
-import { getEmoji } from '../../utils/categories'
-import { getImageSlug, getImageUrl } from '../../utils/transactionImages'
+import { useExpense } from '../../context/ExpenseContext'
 import { ClarificationSheet } from './ClarificationSheet'
 import { VoiceButton } from './VoiceButton'
 import { PriceWheel } from '../ui/PriceWheel'
+
+// ─── Transcript review card ────────────────────────────────────────────────────
+function TranscriptReview({
+  transcript,
+  onConfirm,
+  onDismiss,
+}: {
+  transcript: string
+  onConfirm: (text: string) => void
+  onDismiss: () => void
+}) {
+  const [editing, setEditing] = useState(false)
+  const [value, setValue] = useState(transcript)
+
+  return (
+    <div className="mx-2 mb-2 rounded-3xl bg-bg-card border border-[var(--color-border)] px-5 py-4 animate-clarify-up">
+      <p className="text-[13px] text-text-secondary font-rounded mb-2">
+        {editing ? 'Edit and correct:' : 'I heard:'}
+      </p>
+
+      {editing ? (
+        <input
+          autoFocus
+          value={value}
+          onChange={(e) => setValue(e.target.value)}
+          onKeyDown={(e) => { if (e.key === 'Enter' && value.trim()) onConfirm(value.trim()) }}
+          className="w-full text-[15px] text-text-primary bg-transparent focus:outline-none border-b border-[#E0E0E0] pb-1 mb-4 font-rounded"
+        />
+      ) : (
+        <p className="text-[15px] text-text-primary font-rounded mb-4">"{transcript}"</p>
+      )}
+
+      <div className="flex gap-2">
+        {editing ? (
+          <button
+            onClick={() => value.trim() && onConfirm(value.trim())}
+            className="flex-1 rounded-pill py-2.5 text-[14px] font-semibold font-rounded text-white bg-[#1A1A1A] transition-colors"
+          >
+            Submit ↑
+          </button>
+        ) : (
+          <>
+            <button
+              onClick={() => onConfirm(transcript)}
+              className="flex-1 rounded-pill py-2.5 text-[14px] font-semibold font-rounded text-white bg-[#1A1A1A] transition-colors"
+            >
+              Looks right ✓
+            </button>
+            <button
+              onClick={() => setEditing(true)}
+              className="flex-1 rounded-pill py-2.5 text-[14px] font-semibold font-rounded text-text-primary bg-[#F5F5F5] transition-colors"
+            >
+              Edit ✏
+            </button>
+          </>
+        )}
+        <button onClick={onDismiss} className="px-3 text-text-hint hover:text-text-secondary">
+          <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round">
+            <line x1="18" y1="6" x2="6" y2="18" /><line x1="6" y1="6" x2="18" y2="18" />
+          </svg>
+        </button>
+      </div>
+    </div>
+  )
+}
+
+// ─── Quick amount chips (shown below the wheel) ────────────────────────────────
+const FIXED_AMOUNTS = [5, 10, 20]
+
+function QuickAmountChips({
+  expenseName,
+  expenseCategory,
+  onSelect,
+}: {
+  expenseName: string | null
+  expenseCategory: string | null
+  onSelect: (amount: number) => void
+}) {
+  const { transactions } = useExpense()
+
+  const suggestedAmounts: number[] = []
+  const seen = new Set<number>()
+
+  // Pass 1 — name match (most recent first)
+  if (expenseName) {
+    const nameLower = expenseName.toLowerCase()
+    for (const t of [...transactions].reverse()) {
+      if (
+        t.name.toLowerCase().includes(nameLower) ||
+        nameLower.includes(t.name.toLowerCase())
+      ) {
+        if (!seen.has(t.amount) && !FIXED_AMOUNTS.includes(t.amount)) {
+          seen.add(t.amount)
+          suggestedAmounts.push(t.amount)
+          if (suggestedAmounts.length >= 3) break
+        }
+      }
+    }
+  }
+
+  // Pass 2 — category fallback (fill up to 3)
+  if (suggestedAmounts.length < 3 && expenseCategory) {
+    const catLower = expenseCategory.toLowerCase()
+    for (const t of [...transactions].reverse()) {
+      if (suggestedAmounts.length >= 3) break
+      if ((t.category ?? '').toLowerCase() === catLower) {
+        if (!seen.has(t.amount) && !FIXED_AMOUNTS.includes(t.amount)) {
+          seen.add(t.amount)
+          suggestedAmounts.push(t.amount)
+        }
+      }
+    }
+  }
+
+  return (
+    <div className="mx-2 mb-2 flex flex-wrap gap-2 px-1">
+      {FIXED_AMOUNTS.map((amt) => (
+        <button
+          key={amt}
+          onClick={() => onSelect(amt)}
+          className="rounded-pill px-4 py-2 text-[14px] font-semibold font-rounded transition-colors"
+          style={{ background: 'var(--color-bg-card)', color: 'var(--color-text-primary)', boxShadow: '0 0 0 1px var(--color-border)' }}
+        >
+          ${amt}
+        </button>
+      ))}
+
+      {suggestedAmounts.map((amt) => (
+        <button
+          key={`last-${amt}`}
+          onClick={() => onSelect(amt)}
+          className="rounded-pill px-4 py-2 text-[14px] font-semibold font-rounded transition-colors flex items-center gap-1"
+          style={{ background: 'var(--color-bg-card)', color: 'var(--color-text-primary)', boxShadow: '0 0 0 1px var(--color-border)' }}
+        >
+          <svg width="11" height="11" viewBox="0 0 24 24" fill="none" stroke="var(--color-text-tertiary)" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round">
+            <polyline points="1 4 1 10 7 10" /><path d="M3.51 15a9 9 0 1 0 .49-4.34" />
+          </svg>
+          ${amt}
+        </button>
+      ))}
+    </div>
+  )
+}
 
 const TOAST_DURATION = 3000
 
@@ -55,11 +197,25 @@ export function InputBar() {
   const [text, setText] = useState('')
   const [selectedType, setSelectedType] = useState<TransactionType>('expense')
   const [toast, setToast] = useState<string | null>(null)
-  const [showPriceWheel, setShowPriceWheel] = useState(false)
+  const [voiceTimer, setVoiceTimer] = useState(0)
+  const voiceTimerRef = useRef<ReturnType<typeof setInterval> | null>(null)
   const inputRef = useRef<HTMLInputElement>(null)
   const { addTransaction, isOffline } = useExpense()
   const voice = useVoiceInput()
   const ai = useAIParsing()
+
+  // Timer for VoiceButton display
+  useEffect(() => {
+    const isActive = voice.state === 'listening' || voice.state === 'recording'
+    if (isActive) {
+      setVoiceTimer(0)
+      voiceTimerRef.current = setInterval(() => setVoiceTimer(t => t + 1), 1000)
+    } else {
+      if (voiceTimerRef.current) clearInterval(voiceTimerRef.current)
+      setVoiceTimer(0)
+    }
+    return () => { if (voiceTimerRef.current) clearInterval(voiceTimerRef.current) }
+  }, [voice.state])
 
   function showToast(msg: string) {
     setToast(msg)
@@ -67,11 +223,12 @@ export function InputBar() {
   }
 
   const currentStep = ai.clarificationQueue[ai.currentStepIndex]
-  const isConfirming = currentStep?.field === 'confirm'
+  const queueDone = inputState === 'clarifying'
+    && ai.clarificationQueue.length > 0
+    && ai.currentStepIndex >= ai.clarificationQueue.length
 
   // When clarification step is a plain amount input (no options) → show price wheel
-  // Special amount steps (zero/large) have options, so they use ClarificationSheet
-  const isAskingAmount = currentStep?.field === 'amount' && !currentStep?.options && !isConfirming
+  const isAskingAmount = currentStep?.field === 'amount' && !currentStep?.options
 
   // §2E — show "not an expense" toast when question/command detected
   useEffect(() => {
@@ -97,62 +254,88 @@ export function InputBar() {
     setText('')
   }, [text, selectedType, submit])
 
-  const handleVoice = useCallback(() => {
-    if (voice.isRecording) { voice.stopRecording(); return }
-    voice.startRecording((transcript) => {
-      setText(transcript)
-      submit(transcript, selectedType)
-    })
+  const handleVoiceStart = useCallback(() => {
+    voice.start()
+  }, [voice])
+
+  const handleVoiceStop = useCallback(() => {
+    voice.stop()
+  }, [voice])
+
+  const handleVoiceConfirm = useCallback((text: string) => {
+    voice.confirmTranscript(text)
+    submit(text, selectedType)
   }, [voice, selectedType, submit])
+
+  const handleVoiceDismiss = useCallback(() => {
+    voice.dismissReview()
+  }, [voice])
 
   const handleScanClick = useCallback(() => showToast('Coming soon'), [])
 
-  // When all clarification answered → confirming
+  // Auto-save when no clarification needed OR all steps answered
   useEffect(() => {
-    if (inputState === 'clarifying' && isConfirming) setInputState('confirming')
-  }, [inputState, isConfirming])
-
-  // Show price wheel when amount clarification step reached
-  useEffect(() => {
-    if (inputState === 'clarifying' && isAskingAmount) {
-      setShowPriceWheel(true)
-    } else {
-      setShowPriceWheel(false)
-    }
-  }, [inputState, isAskingAmount])
-
-  async function handleConfirm() {
+    if (!queueDone) return
     const data = ai.collectedData
-    if (!data.name || !data.amount || !data.category) return
+    if (!data.name || !data.amount) return
     setInputState('saving')
-    try {
-      await addTransaction({
-        name: data.name,
-        amount: data.amount,
-        type: data.type,
-        category: data.category,
-        tags: data.frequency !== 'none'
-          ? [{ label: capitalize(data.frequency), type: 'frequency' as const }]
-          : [],
-        frequency: data.frequency,
-        date: new Date(),
-        notes: '',
-        emoji: getEmoji(data.category),
+    addTransaction({
+      name: data.name,
+      amount: data.amount,
+      type: data.type,
+      category: data.category ?? null,
+      frequency: data.frequency,
+      date: new Date(),
+      notes: '',
+      emoji: '',
+    })
+      .then(() => {
+        setInputState('done')
+        setTimeout(() => { setInputState('idle'); ai.reset(); setText('') }, 400)
       })
-      setInputState('done')
-      setTimeout(() => { setInputState('idle'); ai.reset(); setText('') }, 400)
-    } catch {
-      showToast("Couldn't save. Try again?")
-      setInputState('confirming')
-    }
-  }
+      .catch(() => {
+        showToast("Couldn't save. Try again?")
+        setInputState('idle')
+        ai.reset()
+        setText('')
+      })
+  }, [queueDone]) // eslint-disable-line react-hooks/exhaustive-deps
+
+  // Also auto-save when queue is empty (no clarification needed at all)
+  useEffect(() => {
+    if (inputState !== 'clarifying') return
+    if (ai.clarificationQueue.length > 0) return
+    const data = ai.collectedData
+    if (!data.name || !data.amount) return
+    setInputState('saving')
+    addTransaction({
+      name: data.name,
+      amount: data.amount,
+      type: data.type,
+      category: data.category ?? null,
+      frequency: data.frequency,
+      date: new Date(),
+      notes: '',
+      emoji: '',
+    })
+      .then(() => {
+        setInputState('done')
+        setTimeout(() => { setInputState('idle'); ai.reset(); setText('') }, 400)
+      })
+      .catch(() => {
+        showToast("Couldn't save. Try again?")
+        setInputState('idle')
+        ai.reset()
+        setText('')
+      })
+  }, [inputState, ai.clarificationQueue.length]) // eslint-disable-line react-hooks/exhaustive-deps
+
 
   function handleDismissClarification() {
-    ai.reset(); setInputState('idle'); setText(''); setShowPriceWheel(false)
+    ai.reset(); setInputState('idle'); setText('')
   }
 
   function handleWheelConfirm(value: number) {
-    setShowPriceWheel(false)
     ai.answerStep(String(value))
   }
 
@@ -163,13 +346,8 @@ export function InputBar() {
     if (text.length === 0 && inputState === 'typing') setInputState('idle')
   }, [text, inputState])
 
-  const showClarification = (inputState === 'clarifying' || inputState === 'confirming') && currentStep && !isAskingAmount
-
-  const confirmData = ai.collectedData
-  const confirmImageSlug = confirmData.category
-    ? getImageSlug(confirmData.category, confirmData.name ?? '')
-    : 'credit-card'
-  const isSaving = inputState === 'saving'
+  const showClarification = inputState === 'clarifying' && !!currentStep && !isAskingAmount
+  const showAmountPicker = inputState === 'clarifying' && isAskingAmount
 
   return (
     <div className="bg-bg-page safe-bottom">
@@ -177,25 +355,41 @@ export function InputBar() {
       {isOffline && (
         <p className="text-center text-expense text-[12px] py-1">Offline</p>
       )}
-      {voice.error && (
-        <p className="text-center text-expense text-[12px] py-1">{voice.error}</p>
+      {voice.errorMessage && (
+        <p className="text-center text-expense text-[12px] py-1">{voice.errorMessage}</p>
       )}
       {toast && (
         <p className="text-center text-text-secondary text-[12px] py-1 animate-fade-in">{toast}</p>
       )}
 
-      {/* Price wheel (replaces clarification for amount) */}
-      {showPriceWheel && (
-        <PriceWheel
-          onConfirm={handleWheelConfirm}
-          onDismiss={handleDismissClarification}
-          initialValue={0}
-          type={selectedType}
+      {/* Transcript review card */}
+      {voice.state === 'reviewing' && (
+        <TranscriptReview
+          transcript={voice.transcript}
+          onConfirm={handleVoiceConfirm}
+          onDismiss={handleVoiceDismiss}
         />
       )}
 
+      {/* Amount picker: wheel on top, quick chips below */}
+      {showAmountPicker && (
+        <>
+          <PriceWheel
+            onConfirm={handleWheelConfirm}
+            onDismiss={handleDismissClarification}
+            initialValue={0}
+            type={selectedType}
+          />
+          <QuickAmountChips
+            expenseName={ai.collectedData.name}
+            expenseCategory={ai.collectedData.category}
+            onSelect={(amt) => ai.answerStep(String(amt))}
+          />
+        </>
+      )}
+
       {/* Clarification sheet */}
-      {showClarification && !isConfirming && (
+      {showClarification && (
         <ClarificationSheet
           step={currentStep}
           onAnswer={ai.answerStep}
@@ -203,103 +397,79 @@ export function InputBar() {
         />
       )}
 
-      {/* Confirmation card */}
-      {inputState === 'confirming' && confirmData.name && (
-        <div className="mx-2 mb-2 rounded-3xl border border-[#E3E3DE] bg-white px-4 py-3 flex items-center gap-3 animate-clarify-up">
-          <img
-            src={getImageUrl(confirmImageSlug)}
-            alt={confirmData.name}
-            className="w-9 h-9 object-contain flex-shrink-0"
-          />
-          <div className="flex-1 min-w-0">
-            <p className="text-[15px] font-semibold text-text-primary truncate font-rounded">{confirmData.name}</p>
-            <p className="text-[13px] text-text-secondary font-rounded">
-              ${confirmData.amount ?? 0}
-              {confirmData.frequency !== 'none' && ` · ${capitalize(confirmData.frequency)}`}
-              {confirmData.category && ` · ${confirmData.category}`}
-            </p>
-          </div>
-          <button
-            onClick={handleConfirm}
-            disabled={isSaving}
-            className={`text-white text-[12px] font-semibold rounded-pill px-4 py-1.5 transition-colors disabled:opacity-60 font-rounded ${
-              confirmData.type === 'income' ? 'bg-income hover:bg-green-700' : 'bg-send hover:bg-red-600'
-            }`}
-          >
-            {isSaving ? '…' : 'Add'}
-          </button>
-        </div>
-      )}
-
       {/* Main input row */}
-      <div className="flex items-center gap-2 px-2 py-2">
-        {/* Input pill — toggle always visible inside */}
-        <div className="flex-1 flex items-center bg-white rounded-pill px-3 h-[52px] gap-2 float-shadow">
-          {/* Persistent type toggle — always shown */}
-          <TypeToggle selected={selectedType} onChange={setSelectedType} />
-
-          <input
-            ref={inputRef}
-            type="text"
-            value={text}
-            onChange={(e) => setText(e.target.value)}
-            onKeyDown={(e) => { if (e.key === 'Enter') handleSend() }}
-            onFocus={() => { if (inputState === 'idle') setInputState('typing') }}
-            onBlur={() => { if (!text && inputState === 'typing') setInputState('idle') }}
-            placeholder="New expense..."
-            className="flex-1 text-[15px] bg-transparent focus:outline-none text-text-primary placeholder:text-text-hint font-rounded"
-            disabled={inputState === 'parsing' || inputState === 'saving'}
-          />
-
-          {/* Send button — appears when typing */}
-          {isTyping && (
-            <button
-              onClick={handleSend}
-              className={`w-10 h-10 rounded-full flex items-center justify-center flex-shrink-0 animate-scale-in transition-colors ${
-                selectedType === 'income'
-                  ? 'bg-income hover:bg-green-700'
-                  : 'bg-send hover:bg-red-600'
-              }`}
-              aria-label="Send"
-            >
-              <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="white" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round">
-                <line x1="12" y1="19" x2="12" y2="5" />
-                <polyline points="5 12 12 5 19 12" />
-              </svg>
-            </button>
-          )}
-
-          {/* Parsing spinner */}
-          {inputState === 'parsing' && (
-            <div className="w-5 h-5 border-2 border-send border-t-transparent rounded-full animate-spin-slow" />
-          )}
-        </div>
-
-        {/* Voice + Scan buttons */}
-        {!isTyping && inputState !== 'parsing' && (
+      <div className="flex items-center gap-1.5 px-2 py-2">
+        {/* Voice active: hide text input, show only VoiceButton centered */}
+        {voice.isSupported && (voice.state === 'listening' || voice.state === 'recording' || voice.state === 'processing') ? (
+          <div className="flex-1 flex items-center justify-center py-1">
+            <VoiceButton
+              state={voice.state}
+              onStart={handleVoiceStart}
+              onStop={handleVoiceStop}
+              time={voiceTimer}
+            />
+          </div>
+        ) : (
           <>
-            {voice.isSupported && (
-              <VoiceButton isRecording={voice.isRecording} onClick={handleVoice} />
+            {/* Input pill */}
+            <div className="flex-1 min-w-0 flex items-center bg-white rounded-pill px-3 h-[52px] gap-2 float-shadow">
+              <TypeToggle selected={selectedType} onChange={setSelectedType} />
+
+              <input
+                ref={inputRef}
+                type="text"
+                value={text}
+                onChange={(e) => setText(e.target.value)}
+                onKeyDown={(e) => { if (e.key === 'Enter') handleSend() }}
+                onFocus={() => { if (inputState === 'idle') setInputState('typing') }}
+                onBlur={() => { if (!text && inputState === 'typing') setInputState('idle') }}
+                placeholder={selectedType === 'income' ? 'New income...' : 'New expense...'}
+                className="flex-1 min-w-0 text-[15px] bg-transparent focus:outline-none text-text-primary placeholder:text-text-hint font-rounded"
+                disabled={inputState === 'parsing' || inputState === 'saving'}
+              />
+
+              {isTyping && (
+                <button
+                  onClick={handleSend}
+                  className={`w-10 h-10 rounded-full flex items-center justify-center flex-shrink-0 animate-scale-in transition-colors ${
+                    selectedType === 'income' ? 'bg-income hover:bg-green-700' : 'bg-send hover:bg-red-600'
+                  }`}
+                  aria-label="Send"
+                >
+                  <ArrowUp size={15} variant="Bold" color="white" />
+                </button>
+              )}
+
+              {inputState === 'parsing' && (
+                <div className="w-5 h-5 border-2 border-send border-t-transparent rounded-full animate-spin-slow" />
+              )}
+            </div>
+
+            {/* Voice + Scan buttons (only when not typing) */}
+            {!isTyping && inputState !== 'parsing' && (
+              <>
+                {voice.isSupported && (
+                  <div className="flex-shrink-0">
+                    <VoiceButton
+                      state={voice.state}
+                      onStart={handleVoiceStart}
+                      onStop={handleVoiceStop}
+                      time={voiceTimer}
+                    />
+                  </div>
+                )}
+                <button
+                  onClick={handleScanClick}
+                  className="w-10 h-10 rounded-full bg-white flex items-center justify-center flex-shrink-0 hover:bg-gray-50 transition-colors float-shadow text-text-secondary"
+                  aria-label="Scan receipt"
+                >
+                  <ScanBarcode size={18} variant="Linear" color="currentColor" />
+                </button>
+              </>
             )}
-            <button
-              onClick={handleScanClick}
-              className="w-11 h-11 rounded-full bg-white flex items-center justify-center flex-shrink-0 hover:bg-gray-50 transition-colors float-shadow"
-              aria-label="Scan receipt"
-            >
-              <svg width="19" height="19" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
-                <rect x="3" y="3" width="5" height="5" rx="1" />
-                <rect x="16" y="3" width="5" height="5" rx="1" />
-                <rect x="3" y="16" width="5" height="5" rx="1" />
-                <path d="M16 16h2v2h-2zM20 16v4M16 20h4" />
-              </svg>
-            </button>
           </>
         )}
       </div>
     </div>
   )
-}
-
-function capitalize(s: string) {
-  return s.charAt(0).toUpperCase() + s.slice(1)
 }

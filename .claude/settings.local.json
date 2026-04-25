@@ -27,7 +27,19 @@
       "mcp__f5d8ec91-93c2-45a5-9a3b-c02b41a453f3__deploy_to_vercel",
       "mcp__f5d8ec91-93c2-45a5-9a3b-c02b41a453f3__list_teams",
       "Bash(vercel --version)",
-      "Bash(npx vercel *)"
+      "Bash(npx vercel *)",
+      "Bash(npm list *)",
+      "Bash(xargs cat *)",
+      "WebFetch(domain:sarunw.com)",
+      "WebFetch(domain:blog.stackademic.com)",
+      "Bash(npx vite *)",
+      "mcp__8021149e-647a-4286-b727-26a100bba9b3__list_projects",
+      "mcp__8021149e-647a-4286-b727-26a100bba9b3__apply_migration",
+      "Bash(sed -i '' 's|import { useExpense } from '\\\\''../../context/MockExpenseContext'\\\\''|import { useExpense } from '\\\\''../../context/ExpenseContext'\\\\''|g' src/components/insights/InsightsStack.tsx src/components/ui/UndoToast.tsx src/components/input/InputBar.tsx src/components/layout/BudgetModal.tsx src/components/layout/SpendingSheet.tsx src/components/layout/SettingsSheet.tsx src/components/transactions/TransactionList.tsx src/components/transactions/TransactionDetail.tsx)",
+      "Bash(sed -i '' 's|import { useExpense } from '\\\\''../../context/MockExpenseContext'\\\\''\\\\nimport { getHeaderState, formatHeaderNumber } from '\\\\''../../context/MockExpenseContext'\\\\''|import { useExpense } from '\\\\''../../context/ExpenseContext'\\\\''\\\\nimport { getHeaderState, formatHeaderNumber } from '\\\\''../../context/MockExpenseContext'\\\\''|g' src/components/layout/Header.tsx)",
+      "mcp__f5d8ec91-93c2-45a5-9a3b-c02b41a453f3__get_deployment_build_logs",
+      "Bash(git pull *)",
+      "Bash(git stash *)"
     ]
   }
 }

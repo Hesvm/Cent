@@ -1,31 +1,35 @@
 /** @type {import('tailwindcss').Config} */
 export default {
+  darkMode: 'class',
   content: ['./index.html', './src/**/*.{js,ts,jsx,tsx}'],
   theme: {
     extend: {
       colors: {
         bg: {
-          page: '#FBFBF8',
-          card: '#FFFFFF',
-          tag: '#F4F4F3',
+          page: 'var(--color-bg-page)',
+          card: 'var(--color-bg-card)',
+          elevated: 'var(--color-bg-elevated)',
+          secondary: 'var(--color-bg-secondary)',
+          tag: 'var(--color-bg-tertiary)',
         },
         text: {
-          primary: '#1A1A1A',
-          secondary: '#888888',
-          hint: '#AAAAAA',
+          primary: 'var(--color-text-primary)',
+          secondary: 'var(--color-text-secondary)',
+          tertiary: 'var(--color-text-tertiary)',
+          hint: 'var(--color-text-hint)',
           tag: '#A4A297',
         },
         income: {
-          DEFAULT: '#2E7D32',
+          DEFAULT: 'var(--color-income)',
           icon: '#43A047',
         },
         expense: {
-          DEFAULT: '#D32F2F',
-          icon: '#D32F2F',
+          DEFAULT: 'var(--color-expense)',
+          icon: 'var(--color-expense)',
         },
-        send: '#E8403A',
+        send: 'var(--color-send-btn)',
         divider: '#E3E3DE',
-        border: '#E5E5E5',
+        border: 'var(--color-border)',
       },
       fontFamily: {
         sans: ['-apple-system', 'BlinkMacSystemFont', "'Segoe UI'", 'sans-serif'],

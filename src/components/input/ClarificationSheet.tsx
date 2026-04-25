@@ -1,4 +1,5 @@
 import { useRef, useState, useEffect } from 'react'
+import { ArrowUp } from 'iconsax-react'
 import type { ClarificationStep } from '../../types'
 
 interface ClarificationSheetProps {
@@ -36,7 +37,7 @@ export function ClarificationSheet({ step, onAnswer, onDismiss: _onDismiss }: Cl
 
   return (
     <div
-      className={`mx-2 mb-2 rounded-3xl border border-[#E3E3DE] bg-white px-5 py-4 transition-all ${
+      className={`mx-2 mb-2 rounded-3xl border border-[var(--color-border)] bg-bg-card px-5 py-4 transition-all ${
         visible ? 'animate-clarify-up' : 'animate-clarify-down opacity-0'
       }`}
     >
@@ -78,10 +79,7 @@ export function ClarificationSheet({ step, onAnswer, onDismiss: _onDismiss }: Cl
             onClick={handleTextSubmit}
             className="w-8 h-8 rounded-full bg-send flex items-center justify-center flex-shrink-0"
           >
-            <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="white" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round">
-              <line x1="12" y1="19" x2="12" y2="5" />
-              <polyline points="5 12 12 5 19 12" />
-            </svg>
+            <ArrowUp size={14} variant="Bold" color="white" />
           </button>
         </div>
       )}

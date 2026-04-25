@@ -127,14 +127,14 @@ function Ruler({ value, onChange }: RulerProps) {
       {/* Center indicator */}
       <div
         className="absolute top-0 bottom-0 left-1/2 pointer-events-none z-10"
-        style={{ width: 2, marginLeft: -1, background: '#1A1A1A', borderRadius: 2 }}
+        style={{ width: 2, marginLeft: -1, background: 'var(--color-text-primary)', borderRadius: 2 }}
       />
 
-      {/* Edge fades — use white since ruler bg is transparent */}
+      {/* Edge fades — match bg-white/bg-bg-card */}
       <div
         className="absolute inset-0 pointer-events-none z-20"
         style={{
-          background: 'linear-gradient(to right, white 0%, transparent 22%, transparent 78%, white 100%)',
+          background: `linear-gradient(to right, var(--color-bg-card) 0%, transparent 22%, transparent 78%, var(--color-bg-card) 100%)`,
         }}
       />
 
@@ -208,7 +208,7 @@ export function PriceWheel({ onConfirm, onDismiss, initialValue = 0, type = 'exp
   const accent = type === 'income' ? 'bg-income hover:bg-green-700' : 'bg-send hover:bg-red-600'
 
   return (
-    <div className="bg-white rounded-3xl mx-2 mb-2 overflow-hidden animate-clarify-up float-shadow">
+    <div className="bg-bg-card rounded-3xl mx-2 mb-2 overflow-hidden animate-clarify-up float-shadow">
       {/* Amount display — tap opens number keyboard */}
       <div className="flex flex-col items-center pt-5 pb-3">
         <span className="text-[13px] text-text-secondary font-rounded mb-1">How much?</span>

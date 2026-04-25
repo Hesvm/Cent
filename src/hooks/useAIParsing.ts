@@ -1,5 +1,5 @@
 import { useState, useCallback, useRef } from 'react'
-import type { ParsedExpense, ClarificationStep, TransactionType, Category, Frequency } from '../types'
+import type { ParsedExpense, ClarificationStep, TransactionType, Frequency } from '../types'
 
 // ─── Constants ────────────────────────────────────────────────────────────────
 
@@ -10,16 +10,58 @@ const RECURRING_KEYWORDS = [
   'tuition', 'bill', 'installment',
 ]
 
-const CATEGORY_KEYWORDS: [string[], Category][] = [
-  [['coffee', 'latte', 'espresso', 'americano', 'cappuccino', 'matcha', 'starbucks', 'café', 'cafe', 'tea', 'lunch', 'dinner', 'breakfast', 'brunch', 'restaurant', 'pizza', 'burger', 'sushi', 'taco', 'ramen', 'sandwich', 'bar', 'beer', 'wine', 'cocktail', 'drink', 'boba', 'bakery'], 'Dining'],
-  [['uber', 'lyft', 'taxi', 'cab', 'gas', 'fuel', 'parking', 'metro', 'subway', 'train', 'bus', 'toll', 'transit', 'transport', 'flight', 'airfare', 'airline'], 'Transport'],
-  [['gym', 'fitness', 'yoga', 'workout', 'crossfit', 'pilates', 'boxing', 'running', 'cycling', 'dumbbell', 'treadmill', 'peloton', 'swim', 'sport'], 'Fitness'],
-  [['grocery', 'groceries', 'supermarket', 'walmart', 'costco', 'trader', 'whole foods', 'safeway', 'kroger', 'market', 'aldi', 'produce'], 'Groceries'],
-  [['netflix', 'spotify', 'hulu', 'disney', 'apple tv', 'amazon prime', 'icloud', 'youtube', 'game', 'cinema', 'movie', 'concert', 'ticket', 'stream'], 'Entertainment'],
-  [['amazon', 'target', 'shopping', 'clothes', 'shoes', 'shirt', 'jacket', 'dress', 'sneakers', 'ikea', 'zara', 'h&m', 'ebay', 'etsy', 'store', 'mall', 'shop'], 'Shopping'],
-  [['rent', 'mortgage', 'landlord', 'housing', 'internet', 'wifi', 'phone', 'electric', 'water', 'gas bill', 'utilities', 'home', 'lease'], 'Housing'],
-  [['doctor', 'dentist', 'pharmacy', 'prescription', 'hospital', 'clinic', 'health', 'vet', 'medical', 'therapy', 'medicine', 'drug'], 'Health'],
-  [['salary', 'paycheck', 'income', 'freelance', 'bonus', 'dividend', 'deposit', 'refund', 'cashback', 'reimbursement', 'payment received', 'got paid', 'earned'], 'Income'],
+// Maps keyword arrays → new 50-category names
+const CATEGORY_KEYWORDS: [string[], string][] = [
+  [['coffee', 'latte', 'espresso', 'americano', 'cappuccino', 'matcha', 'starbucks', 'café', 'cafe', 'boba', 'tea shop'], 'Coffee & Cafes'],
+  [['restaurant', 'diner', 'lunch', 'dinner', 'breakfast', 'brunch', 'sushi', 'ramen', 'taco', 'noodle', 'bistro', 'eatery'], 'Restaurants'],
+  [['mcdonald', 'kfc', 'burger king', 'fast food', 'street food', 'quick bite', 'burger', 'fries', 'pizza', 'sandwich', 'wrap', 'hot dog'], 'Fast Food'],
+  [['bakery', 'cake', 'pastry', 'dessert', 'ice cream', 'donut', 'cookie', 'sweets'], 'Bakery & Sweets'],
+  [['uber eats', 'doordash', 'glovo', 'delivery', 'food delivery', 'grubhub', 'postmates'], 'Delivery'],
+  [['bar', 'nightclub', 'club', 'beer', 'wine', 'cocktail', 'drink', 'whiskey', 'vodka', 'alcohol', 'pub'], 'Bars & Nightlife'],
+  [['team lunch', 'client dinner', 'office lunch', 'work meal', 'business dinner', 'team dinner'], 'Work Meals'],
+  [['grocery', 'groceries', 'supermarket', 'walmart', 'costco', 'trader joe', 'whole foods', 'safeway', 'kroger', 'aldi', 'market', 'produce', 'fresh market'], 'Groceries'],
+  [['uber', 'lyft', 'bolt', 'taxi', 'cab', 'ride'], 'Ride-hailing'],
+  [['gas', 'fuel', 'petrol', 'bp', 'shell', 'chevron', 'exxon'], 'Fuel'],
+  [['parking', 'parkimeter', 'parkwhiz', 'park meter'], 'Parking'],
+  [['metro', 'subway', 'bus ticket', 'train ticket', 'transit', 'tram', 'commuter rail'], 'Public Transit'],
+  [['flight', 'airfare', 'airline', 'plane ticket', 'airport', 'ryanair', 'easyjet'], 'Flights'],
+  [['car service', 'car repair', 'oil change', 'car wash', 'tire', 'mechanic', 'auto'], 'Car Maintenance'],
+  [['clothes', 'clothing', 'shirt', 'jacket', 'dress', 'pants', 'jeans', 'sneakers', 'shoes', 'accessories', 'zara', 'h&m', 'gap', 'uniqlo'], 'Clothing'],
+  [['laptop', 'phone', 'tablet', 'gadget', 'headphones', 'electronics', 'cable', 'charger', 'ipad', 'iphone', 'airpods', 'camera', 'monitor'], 'Electronics'],
+  [['ikea', 'furniture', 'sofa', 'chair', 'table', 'desk', 'home decor', 'appliance', 'decor', 'rug'], 'Home & Furniture'],
+  [['book', 'notebook', 'stationery', 'pen', 'pencil', 'art supply', 'kindle', 'textbook'], 'Books & Stationery'],
+  [['gift', 'present', 'wrapping', 'birthday gift', 'christmas gift'], 'Gifts'],
+  [['amazon', 'ebay', 'etsy', 'aliexpress', 'online shopping', 'e-commerce', 'shop online'], 'Online Shopping'],
+  [['haircut', 'salon', 'cosmetic', 'skincare', 'makeup', 'grooming', 'beauty', 'spa treatment', 'nail'], 'Beauty & Personal'],
+  [['gym', 'fitness', 'yoga', 'workout', 'crossfit', 'pilates', 'boxing', 'cycling', 'dumbbell', 'treadmill', 'peloton', 'swim', 'sport', 'running shoes', 'athletic'], 'Gym & Sports'],
+  [['doctor', 'hospital', 'clinic', 'lab test', 'dentist', 'surgery', 'ER', 'urgent care'], 'Medical'],
+  [['pharmacy', 'medicine', 'prescription', 'vitamins', 'supplements', 'walgreens', 'cvs', 'boots'], 'Pharmacy'],
+  [['therapy', 'counseling', 'therapist', 'psychiatrist', 'mental health', 'headspace', 'calm app'], 'Mental Health'],
+  [['spa', 'massage', 'sauna', 'wellness', 'meditation', 'retreat', 'bath house'], 'Wellness'],
+  [['rent', 'mortgage', 'landlord', 'monthly rent', 'lease payment'], 'Rent'],
+  [['electricity', 'electric bill', 'water bill', 'gas bill', 'internet bill', 'phone bill', 'utilities', 'utility', 'wifi', 'broadband'], 'Utilities'],
+  [['cleaning', 'plumber', 'electrician', 'handyman', 'repair', 'home repair', 'maintenance', 'housekeeper'], 'Home Services'],
+  [['vet', 'pet food', 'pet grooming', 'pet supplies', 'dog', 'cat food', 'pet store'], 'Pets'],
+  [['daycare', 'babysitter', 'school fee', 'kindergarten', 'childcare', 'baby supplies', 'nanny'], 'Childcare'],
+  [['insurance', 'health insurance', 'car insurance', 'home insurance', 'life insurance', 'premium'], 'Insurance'],
+  [['netflix', 'spotify', 'hulu', 'disney+', 'apple tv', 'youtube premium', 'amazon prime', 'icloud', 'streaming'], 'Streaming'],
+  [['game', 'playstation', 'xbox', 'steam', 'in-app purchase', 'gaming', 'nintendo', 'video game'], 'Gaming'],
+  [['concert', 'cinema', 'movie ticket', 'theater', 'festival', 'sports event', 'show ticket', 'event ticket'], 'Events & Tickets'],
+  [['hobby', 'craft', 'photography', 'instrument', 'guitar', 'painting', 'knitting', 'art class'], 'Hobbies'],
+  [['hotel', 'airbnb', 'hostel', 'vacation', 'holiday', 'resort', 'accommodation', 'motel'], 'Travel & Hotels'],
+  [['hiking', 'camping', 'outdoor', 'climbing', 'ski', 'surfing', 'cycling gear', 'sports equipment'], 'Sports & Outdoors'],
+  [['saas', 'software subscription', 'notion', 'slack', 'figma', 'github', 'adobe', 'microsoft', 'dropbox', 'zoom'], 'Software & Tools'],
+  [['office supplies', 'printer ink', 'stationery office', 'desk accessory', 'staples office'], 'Office Supplies'],
+  [['client meeting', 'business expense', 'freelance cost', 'coworking', 'wework'], 'Freelance Expense'],
+  [['course', 'udemy', 'coursera', 'workshop', 'tuition', 'school', 'class', 'training', 'certification'], 'Education'],
+  [['tax', 'government fee', 'bank fee', 'accountant', 'legal fee', 'fine'], 'Taxes & Fees'],
+  [['stock', 'crypto', 'bitcoin', 'investment', 'brokerage', 'savings transfer', 'etf', 'robinhood'], 'Investments'],
+  [['loan payment', 'installment', 'credit card payment', 'debt payment', 'mortgage payment'], 'Loan Payments'],
+  [['salary', 'paycheck', 'wages', 'employment income'], 'Salary'],
+  [['freelance payment', 'client payment', 'project payment', 'invoice paid', 'consulting fee'], 'Freelance Income'],
+  [['refund', 'cashback', 'reimbursement', 'money back', 'returned', 'got back'], 'Refund'],
+  [['gift received', 'birthday money', 'money from', 'received gift'], 'Gift Received'],
+  [['dividend', 'rental income', 'interest', 'bonus', 'commission', 'deposit received', 'got paid', 'earned'], 'Other Income'],
 ]
 
 const FREQUENCY_KEYWORDS: [string[], Frequency][] = [
@@ -93,7 +135,7 @@ function parseWordNumber(text: string): { value: number; confidence: number } | 
 
 // ─── Local parser ─────────────────────────────────────────────────────────────
 
-function inferCategory(text: string): { category: Category | null; confidence: number } {
+function inferCategory(text: string): { category: string | null; confidence: number } {
   const lower = text.toLowerCase()
   for (const [kws, cat] of CATEGORY_KEYWORDS) {
     if (kws.some((kw) => lower.includes(kw))) {
@@ -171,7 +213,7 @@ function localParse(text: string, type: TransactionType): ParsedExpense & { hasR
 
   // ── Category inference ─────────────────────────────────────────────────────
   const { category, confidence: catConf } = inferCategory(lower)
-  const finalCategory = type === 'income' && !category ? 'Income' : category
+  const finalCategory = type === 'income' && !category ? 'Other Income' : category
 
   return {
     name,
@@ -288,24 +330,10 @@ function buildClarificationQueue(
     })
   }
 
-  // [5] CATEGORY — ask if confidence < 0.60 (§5C)
-  if (!parsed.category || parsed.confidence.category < 0.6) {
-    steps.push({
-      field: 'category',
-      question: 'What category is this?',
-      options: [
-        { id: 1, label: 'Dining', value: 'Dining' },
-        { id: 2, label: 'Fitness', value: 'Fitness' },
-        { id: 3, label: 'Groceries', value: 'Groceries' },
-        { id: 4, label: 'Transport', value: 'Transport' },
-        { id: 5, label: 'Shopping', value: 'Shopping' },
-        { id: 6, label: 'Other', value: 'Other' },
-      ],
-    })
-  }
+  // [5] CATEGORY — never ask. Always use best guess or default 'Other'.
+  // Category is an internal field the user can edit after logging.
 
-  // [6] CONFIRM — always last (§6)
-  steps.push({ field: 'confirm', question: '', options: null })
+  // No confirm step — save fires automatically when queue is exhausted.
 
   return steps
 }
@@ -316,7 +344,7 @@ export interface CollectedData {
   name: string | null
   amount: number | null
   type: TransactionType
-  category: Category | null
+  category: string | null
   frequency: Frequency
 }
 
@@ -421,7 +449,7 @@ export function useAIParsing(): UseAIParsingResult {
       name: derivedName,
       amount: parsed.amount,
       type: effectiveType,
-      category: parsed.category,
+      category: parsed.category ?? 'Other',
       frequency: parsed.frequency ?? 'none',
     })
 
@@ -472,7 +500,7 @@ export function useAIParsing(): UseAIParsingResult {
           next.frequency = value as Frequency
           break
         case 'category':
-          next.category = value as Category
+          next.category = value
           break
         case 'type':
           next.type = value as TransactionType

@@ -2,31 +2,16 @@ export type TransactionType = 'expense' | 'income'
 
 export type Frequency = 'none' | 'daily' | 'weekly' | 'monthly' | 'yearly'
 
-export type Category =
-  | 'Dining'
-  | 'Fitness'
-  | 'Groceries'
-  | 'Transport'
-  | 'Shopping'
-  | 'Entertainment'
-  | 'Health'
-  | 'Housing'
-  | 'Utilities'
-  | 'Income'
-  | 'Other'
-
-export interface Tag {
-  label: string
-  type: 'category' | 'frequency' | 'custom'
-}
+// Category is now a plain string to support 50 built-in + custom categories.
+// null means uncategorized.
+export type Category = string
 
 export interface Transaction {
   id: string
   name: string
   amount: number
   type: TransactionType
-  category: Category
-  tags: Tag[]
+  category: string | null
   frequency: Frequency
   date: Date
   notes: string
@@ -39,7 +24,7 @@ export interface ParsedExpense {
   name: string | null
   amount: number | null
   type: TransactionType | null
-  category: Category | null
+  category: string | null
   frequency: Frequency | null
   tags: string[]
   confidence: {
@@ -77,7 +62,7 @@ export interface Budget {
 }
 
 export interface CategorySummary {
-  category: Category
+  category: string
   total_spent: number
   percent_of_total: number
   color: string
@@ -117,3 +102,22 @@ export type InputState =
   | 'confirming'
   | 'saving'
   | 'done'
+
+// ─── Insights ─────────────────────────────────────────────────────────────────
+
+export type TriggerId =
+  | 'RT-01' | 'RT-02' | 'RT-03' | 'RT-04'
+  | 'DD-01' | 'DD-02' | 'DD-03' | 'DD-04'
+  | 'DD-05' | 'DD-06' | 'DD-07' | 'DD-08'
+
+export interface Insight {
+  id: string
+  trigger_id: string
+  message: string
+  emoji: string
+  priority: number
+  shown_date: string          // 'YYYY-MM-DD'
+  dismissed_at: Date | null
+  generated_at: Date
+  trigger_data: Record<string, unknown>
+}

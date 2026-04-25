@@ -1,5 +1,5 @@
 import { useEffect, useState } from 'react'
-import { useExpense } from '../../context/MockExpenseContext'
+import { useExpense } from '../../context/ExpenseContext'
 
 export function UndoToast() {
   const { pendingDeletion, undoDelete } = useExpense()

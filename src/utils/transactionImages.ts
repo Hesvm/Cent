@@ -192,20 +192,80 @@ const CORE_CATEGORIES = new Set([
   'Groceries', 'Entertainment', 'Health', 'Housing', 'Utilities', 'Other',
 ])
 
+// ─── New 50-category name → CDN slug ────────────────────────────────────────
+const CATEGORY_NAME_TO_SLUG: Record<string, string> = {
+  'Restaurants':        'restaurant',
+  'Coffee & Cafes':     'coffee',
+  'Groceries':          'supermarket',
+  'Bars & Nightlife':   'cocktail',
+  'Fast Food':          'burger',
+  'Bakery & Sweets':    'pizza',
+  'Delivery':           'shopping-bag',
+  'Work Meals':         'restaurant',
+  'Ride-hailing':       'taxi',
+  'Fuel':               'gas-station',
+  'Parking':            'car',
+  'Public Transit':     'bus',
+  'Flights':            'airplane',
+  'Car Maintenance':    'car',
+  'Clothing':           'sneakers',
+  'Electronics':        'laptop',
+  'Home & Furniture':   'house',
+  'Books & Stationery': 'book',
+  'Gifts':              'gift',
+  'Online Shopping':    'shopping-bag',
+  'Beauty & Personal':  'sunglasses',
+  'Gym & Sports':       'dumbbell',
+  'Medical':            'ambulance',
+  'Pharmacy':           'ambulance',
+  'Mental Health':      'yoga',
+  'Wellness':           'yoga',
+  'Rent':               'house',
+  'Utilities':          'lightning',
+  'Home Services':      'house',
+  'Pets':               'dog',
+  'Childcare':          'credit-card',
+  'Insurance':          'insurance',
+  'Streaming':          'subscription',
+  'Gaming':             'movie',
+  'Events & Tickets':   'movie',
+  'Hobbies':            'camera',
+  'Travel & Hotels':    'suitcase',
+  'Sports & Outdoors':  'running',
+  'Software & Tools':   'laptop',
+  'Office Supplies':    'book',
+  'Freelance Expense':  'wallet',
+  'Education':          'book',
+  'Taxes & Fees':       'receipt',
+  'Investments':        'bank',
+  'Loan Payments':      'bank',
+  'Salary':             'money',
+  'Freelance Income':   'money',
+  'Refund':             'credit-card',
+  'Gift Received':      'gift',
+  'Other Income':       'wallet',
+}
+
+/** Returns the CDN slug for a category name (new system or legacy). */
+export function getCategorySlug(category: string | null, name = ''): string {
+  if (!category) {
+    // Fall back to name-keyword lookup
+    const lname = name.toLowerCase()
+    for (const [kw, slug] of Object.entries(CATEGORY_MAP)) {
+      if (CORE_CATEGORIES.has(kw)) continue
+      if (lname.includes(kw)) return slug
+    }
+    return 'credit-card'
+  }
+  // New 50-category system
+  if (CATEGORY_NAME_TO_SLUG[category]) return CATEGORY_NAME_TO_SLUG[category]!
+  // Legacy fallback
+  if (CORE_CATEGORIES.has(category) && CATEGORY_MAP[category]) return CATEGORY_MAP[category]!
+  return 'credit-card'
+}
+
 export function getImageSlug(category: string, name: string): string {
-  // Core category always wins
-  if (CORE_CATEGORIES.has(category) && CATEGORY_MAP[category]) {
-    return CATEGORY_MAP[category]!
-  }
-
-  const lname = name.toLowerCase()
-  // Check name keywords
-  for (const [kw, slug] of Object.entries(CATEGORY_MAP)) {
-    if (CORE_CATEGORIES.has(kw)) continue // skip category keys in keyword pass
-    if (lname.includes(kw)) return slug
-  }
-
-  return CATEGORY_MAP[category] ?? 'credit-card'
+  return getCategorySlug(category, name)
 }
 
 export function getImageUrl(slug: string): string {

@@ -1,19 +1,69 @@
 import { createContext, useContext, useState, useRef, useCallback, type ReactNode } from 'react'
-import type { Transaction, Budget, Category, PeriodSummary, CategorySummary, HeaderState } from '../types'
+import type { Transaction, Budget, PeriodSummary, CategorySummary, HeaderState, Insight } from '../types'
+import { useInsights } from '../hooks/useInsights'
 
-// ─── Category colors (Part 6) ─────────────────────────────────────────────────
-export const CATEGORY_COLORS: Record<Category, string> = {
-  Dining: '#FF6B6B',
-  Transport: '#4ECDC4',
-  Fitness: '#45B7D1',
-  Groceries: '#96CEB4',
-  Shopping: '#FECA57',
-  Entertainment: '#FF9FF3',
-  Health: '#54A0FF',
-  Housing: '#5F27CD',
-  Utilities: '#00D2D3',
-  Income: '#2E7D32',
-  Other: '#B2BEC3',
+// ─── Category colors (50-category system) ─────────────────────────────────────
+export const CATEGORY_COLORS: Record<string, string> = {
+  // Food & Drink
+  'Restaurants':        '#FF6B6B',
+  'Coffee & Cafes':     '#D7816A',
+  'Groceries':          '#96CEB4',
+  'Bars & Nightlife':   '#C56BFF',
+  'Fast Food':          '#FF8C42',
+  'Bakery & Sweets':    '#F7B2BD',
+  'Delivery':           '#FF6B6B',
+  'Work Meals':         '#E07A5F',
+  // Transport
+  'Ride-hailing':       '#4ECDC4',
+  'Fuel':               '#45B7D1',
+  'Parking':            '#5BC0EB',
+  'Public Transit':     '#4ECDC4',
+  'Flights':            '#0077B6',
+  'Car Maintenance':    '#4895EF',
+  // Shopping
+  'Clothing':           '#FECA57',
+  'Electronics':        '#3A86FF',
+  'Home & Furniture':   '#8338EC',
+  'Books & Stationery': '#FB8500',
+  'Gifts':              '#FF006E',
+  'Online Shopping':    '#FECA57',
+  'Beauty & Personal':  '#F72585',
+  // Health & Fitness
+  'Gym & Sports':       '#45B7D1',
+  'Medical':            '#54A0FF',
+  'Pharmacy':           '#48CAE4',
+  'Mental Health':      '#7400B8',
+  'Wellness':           '#80B918',
+  // Home & Life
+  'Rent':               '#5F27CD',
+  'Utilities':          '#00D2D3',
+  'Home Services':      '#6A4C93',
+  'Pets':               '#52B788',
+  'Childcare':          '#74C69D',
+  'Insurance':          '#2D6A4F',
+  // Entertainment & Lifestyle
+  'Streaming':          '#FF9FF3',
+  'Gaming':             '#6C63FF',
+  'Events & Tickets':   '#F4A261',
+  'Hobbies':            '#E9C46A',
+  'Travel & Hotels':    '#264653',
+  'Sports & Outdoors':  '#2A9D8F',
+  // Work & Finance
+  'Software & Tools':   '#457B9D',
+  'Office Supplies':    '#A8DADC',
+  'Freelance Expense':  '#1D3557',
+  'Education':          '#E63946',
+  'Taxes & Fees':       '#6B705C',
+  'Investments':        '#B7B7A4',
+  'Loan Payments':      '#A5A58D',
+  // Income
+  'Salary':             '#2E7D32',
+  'Freelance Income':   '#388E3C',
+  'Refund':             '#43A047',
+  'Gift Received':      '#4CAF50',
+  'Other Income':       '#66BB6A',
+  // Legacy fallback
+  'Other':              '#B2BEC3',
 }
 
 // ─── Calculation helpers (Part 10) ────────────────────────────────────────────
@@ -123,9 +173,10 @@ export function getPeriodSummary(
   }
 
   // Category breakdown
-  const catMap = new Map<Category, number>()
+  const catMap = new Map<string, number>()
   for (const t of periodTxns.filter(t => t.type === 'expense')) {
-    catMap.set(t.category, (catMap.get(t.category) ?? 0) + t.amount)
+    const cat = t.category ?? 'Other'
+    catMap.set(cat, (catMap.get(cat) ?? 0) + t.amount)
   }
   const byCategory: CategorySummary[] = Array.from(catMap.entries())
     .sort((a, b) => b[1] - a[1])
@@ -133,7 +184,7 @@ export function getPeriodSummary(
       category: cat,
       total_spent: total,
       percent_of_total: expenses > 0 ? total / expenses : 0,
-      color: CATEGORY_COLORS[cat],
+      color: CATEGORY_COLORS[cat] ?? '#B2BEC3',
     }))
 
   // Period label
@@ -188,36 +239,39 @@ interface ExpenseContextType {
   fetchTransactions: () => Promise<void>
   pendingDeletion: PendingDeletion | null
   undoDelete: () => void
+  // Insights
+  insights: Insight[]
+  activeInsights: Insight[]
+  dismissInsight: (id: string) => void
+  checkRealtimeTriggers: (newTx: Transaction, allTxns: Transaction[]) => Promise<void>
 }
 
 const ExpenseContext = createContext<ExpenseContextType | null>(null)
 
 const SEED: Transaction[] = [
   {
-    id: '1', name: 'Box subscription', amount: 50, type: 'expense', category: 'Fitness',
-    tags: [{ label: 'Monthly', type: 'frequency' }], frequency: 'monthly',
-    date: new Date(Date.now() - 86400000), notes: '', emoji: '🥊', createdAt: new Date(),
+    id: '1', name: 'Box subscription', amount: 50, type: 'expense', category: 'Gym & Sports',
+    frequency: 'monthly', date: new Date(Date.now() - 86400000), notes: '', emoji: '🥊', createdAt: new Date(),
   },
   {
-    id: '2', name: 'Sam americano', amount: 50, type: 'expense', category: 'Dining',
-    tags: [], frequency: 'none', date: new Date(Date.now() - 86400000), notes: '', emoji: '🧋', createdAt: new Date(),
+    id: '2', name: 'Sam americano', amount: 50, type: 'expense', category: 'Coffee & Cafes',
+    frequency: 'none', date: new Date(Date.now() - 86400000), notes: '', emoji: '🧋', createdAt: new Date(),
   },
   {
-    id: '3', name: 'January salary', amount: 4000, type: 'income', category: 'Income',
-    tags: [], frequency: 'monthly', date: new Date(Date.now() - 86400000), notes: '', emoji: '💵', createdAt: new Date(),
+    id: '3', name: 'January salary', amount: 4000, type: 'income', category: 'Salary',
+    frequency: 'monthly', date: new Date(Date.now() - 86400000), notes: '', emoji: '💵', createdAt: new Date(),
   },
   {
-    id: '4', name: 'Box subscription', amount: 50, type: 'expense', category: 'Fitness',
-    tags: [{ label: 'Monthly', type: 'frequency' }], frequency: 'monthly',
-    date: new Date(), notes: '', emoji: '🥊', createdAt: new Date(),
+    id: '4', name: 'Box subscription', amount: 50, type: 'expense', category: 'Gym & Sports',
+    frequency: 'monthly', date: new Date(), notes: '', emoji: '🥊', createdAt: new Date(),
   },
   {
-    id: '5', name: 'Sam americano', amount: 50, type: 'expense', category: 'Dining',
-    tags: [], frequency: 'none', date: new Date(), notes: '', emoji: '🧋', createdAt: new Date(),
+    id: '5', name: 'Sam americano', amount: 50, type: 'expense', category: 'Coffee & Cafes',
+    frequency: 'none', date: new Date(), notes: '', emoji: '🧋', createdAt: new Date(),
   },
   {
-    id: '6', name: 'January salary', amount: 4000, type: 'income', category: 'Income',
-    tags: [], frequency: 'monthly', date: new Date(), notes: '', emoji: '💵', createdAt: new Date(),
+    id: '6', name: 'January salary', amount: 4000, type: 'income', category: 'Salary',
+    frequency: 'monthly', date: new Date(), notes: '', emoji: '💵', createdAt: new Date(),
   },
 ]
 
@@ -229,17 +283,31 @@ export function MockExpenseProvider({ children }: { children: ReactNode }) {
   const [pendingDeletion, setPendingDeletion] = useState<PendingDeletion | null>(null)
   const undoTimer = useRef<number | null>(null)
 
+  const {
+    insights,
+    activeInsights,
+    dismissInsight,
+    checkRealtimeTriggers,
+    resetBudgetThresholds,
+  } = useInsights(transactions, budget)
+
   const balance = transactions.reduce(
     (acc, t) => acc + (t.type === 'income' ? t.amount : -t.amount), 0
   )
 
   const setBudget = useCallback((b: Budget | null) => {
     setBudgetState(b)
-  }, [])
+    resetBudgetThresholds()
+  }, [resetBudgetThresholds])
 
   async function addTransaction(t: Omit<Transaction, 'id' | 'createdAt'>) {
     const newT: Transaction = { ...t, id: String(Date.now()), createdAt: new Date() }
-    setTransactions((prev) => [newT, ...prev])
+    setTransactions((prev) => {
+      // Fire realtime triggers after state update (fire-and-forget)
+      const updated = [newT, ...prev]
+      setTimeout(() => { void checkRealtimeTriggers(newT, updated) }, 0)
+      return updated
+    })
   }
 
   async function deleteTransaction(id: string) {
@@ -270,6 +338,7 @@ export function MockExpenseProvider({ children }: { children: ReactNode }) {
       addTransaction, deleteTransaction, updateTransaction,
       fetchTransactions: async () => {},
       pendingDeletion, undoDelete,
+      insights, activeInsights, dismissInsight, checkRealtimeTriggers,
     }}>
       {children}
     </ExpenseContext.Provider>

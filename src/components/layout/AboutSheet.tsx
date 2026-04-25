@@ -26,43 +26,47 @@ export function AboutSheet({ onClose }: AboutSheetProps) {
       style={{ background: 'rgba(0,0,0,0.4)' }}
       onClick={(e) => { if (e.target === backdropRef.current) close() }}
     >
-      <div
-        className={`bg-white rounded-t-[24px] w-full max-w-lg mx-auto ${isClosing ? 'animate-slide-down' : 'animate-slide-up'}`}
-        onClick={(e) => e.stopPropagation()}
-      >
-        <div className="flex justify-center pt-3 pb-2">
-          <div className="w-10 h-1 rounded-full bg-divider" />
-        </div>
-
-        <div className="px-6 pb-10">
-          {/* Logo + name */}
-          <div className="flex flex-col items-center gap-3 py-6">
-            <div className="w-16 h-16 rounded-[22px] overflow-hidden float-shadow">
-              <img src="/cent-logo.svg" alt="Cent" className="w-full h-full object-cover" />
-            </div>
-            <div className="text-center">
-              <p className="text-[22px] font-bold text-text-primary font-rounded">Cent</p>
-              <p className="text-[13px] text-text-secondary font-rounded mt-0.5">Version 0.1.0 · Beta</p>
-            </div>
+      {/* Floating card wrapper — 8px side margins, safe-area bottom */}
+      <div className="px-2 w-full" style={{ paddingBottom: 'max(8px, env(safe-area-inset-bottom))' }}>
+        <div
+          className={`bg-bg-card rounded-[36px] max-w-lg mx-auto float-shadow ${isClosing ? 'animate-slide-down' : 'animate-slide-up'}`}
+          onClick={(e) => e.stopPropagation()}
+        >
+          {/* Grabber */}
+          <div className="flex justify-center pt-[5px] pb-3">
+            <div className="w-9 h-[5px] rounded-full" style={{ background: 'var(--grabber-color)' }} />
           </div>
 
-          {/* Tagline */}
-          <p className="text-center text-[15px] text-text-secondary font-rounded mb-6 leading-relaxed">
-            A minimal expense tracker that listens.<br />
-            Type or speak — Cent figures out the rest.
-          </p>
+          <div className="px-6 pb-8">
+            {/* Logo + name */}
+            <div className="flex flex-col items-center gap-3 py-6">
+              <div className="w-16 h-16 rounded-[22px] overflow-hidden float-shadow">
+                <img src="/cent-logo.svg" alt="Cent" className="w-full h-full object-cover" />
+              </div>
+              <div className="text-center">
+                <p className="text-[22px] font-bold text-text-primary font-rounded">Cent</p>
+                <p className="text-[13px] text-text-secondary font-rounded mt-0.5">Version 0.1.0 · Beta</p>
+              </div>
+            </div>
 
-          {/* Info rows */}
-          <div className="space-y-2">
-            <InfoRow label="Made by" value="Hesam" />
-            <InfoRow label="Built with" value="React · TypeScript · Gemini" />
-            <InfoRow label="Design" value="SF Pro Rounded · Thiings.co" />
-            <InfoRow label="Status" value="Early access" dot="green" />
+            {/* Tagline */}
+            <p className="text-center text-[15px] text-text-secondary font-rounded mb-6 leading-relaxed">
+              A minimal expense tracker that listens.<br />
+              Type or speak — Cent figures out the rest.
+            </p>
+
+            {/* Info rows */}
+            <div className="space-y-2">
+              <InfoRow label="Made by" value="Hesam" />
+              <InfoRow label="Built with" value="React · TypeScript · Gemini" />
+              <InfoRow label="Design" value="SF Pro Rounded · Thiings.co" />
+              <InfoRow label="Status" value="Early access" dot="green" />
+            </div>
+
+            <p className="text-center text-[12px] text-text-hint font-rounded mt-8">
+              © 2026 Cent. All rights reserved.
+            </p>
           </div>
-
-          <p className="text-center text-[12px] text-text-hint font-rounded mt-8">
-            © 2026 Cent. All rights reserved.
-          </p>
         </div>
       </div>
     </div>

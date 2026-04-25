@@ -8,21 +8,37 @@ FIELDS:
 - name: clean, capitalized expense name (string or null if truly missing)
 - amount: numeric amount (number or null). Parse word numbers: "fifty"→50, "a grand"→1000, "couple hundred"→200
 - type: "expense" or "income"
-  - income signals: salary, received, got paid, refund, cashback, reimbursed, earned, freelance
+  - income signals: salary, received, got paid, refund, cashback, reimbursed, earned, freelance payment
   - expense signals: spent, paid, bought, cost, fee, subscription
   - negative amounts → income (refund)
   - default to user-selected type when ambiguous
-- category: one of [Dining, Fitness, Groceries, Transport, Shopping, Entertainment, Health, Housing, Utilities, Income, Other] or null
+- category: exactly one of the 50 categories below, or null if confidence ≤ 0.70
 - frequency: "none" | "daily" | "weekly" | "monthly" | "yearly"
   - ONLY set non-"none" if EXPLICITLY stated ("monthly", "weekly", "annual", etc.)
-  - Do NOT infer from recurring words like "rent" — leave as "none" (the app asks separately)
-- tags: [] (always empty array — app derives tags automatically)
+  - Do NOT infer from recurring words like "rent" — leave as "none"
+- tags: [] (always empty array)
 - confidence: { name: 0-1, amount: 0-1, category: 0-1, frequency: 0-1 }
 
+THE 50 CATEGORIES (use exact names):
+Food & Drink: Restaurants, Coffee & Cafes, Groceries, Bars & Nightlife, Fast Food, Bakery & Sweets, Delivery, Work Meals
+Transport: Ride-hailing, Fuel, Parking, Public Transit, Flights, Car Maintenance
+Shopping: Clothing, Electronics, Home & Furniture, Books & Stationery, Gifts, Online Shopping, Beauty & Personal
+Health & Fitness: Gym & Sports, Medical, Pharmacy, Mental Health, Wellness
+Home & Life: Rent, Utilities, Home Services, Pets, Childcare, Insurance
+Entertainment & Lifestyle: Streaming, Gaming, Events & Tickets, Hobbies, Travel & Hotels, Sports & Outdoors
+Work & Finance: Software & Tools, Office Supplies, Freelance Expense, Education, Taxes & Fees, Investments, Loan Payments
+Income: Salary, Freelance Income, Refund, Gift Received, Other Income
+
+CATEGORY RULES:
+- Only return a category if confidence > 0.70. Otherwise return null.
+- Pick the most specific category that fits.
+- For income transactions, prefer income categories (Salary, Freelance Income, Refund, etc.)
+- Ambiguous merchants (e.g. "Amazon", "CVS") → null (could be multiple categories)
+
 CONFIDENCE RULES:
+- category: 0.95+ if very obvious, 0.71-0.94 if likely, ≤0.70 returns null
 - amount: 0.95 if clearly numeric, 0.6-0.8 if word number, 0.0 if missing
 - name: 0.95 if obvious, 0.5 if vague, 0.0 if not present
-- category: 0.90+ if very obvious (coffee→Dining, gym→Fitness), 0.65-0.85 if likely, 0.0 if unclear
 - frequency: 0.95 if explicitly stated, 0.99 if "none" (default)
 
 NAME CLEANING:
@@ -31,24 +47,26 @@ NAME CLEANING:
 - "paid the rent 2000" → "Rent"
 - "uber to airport 25" → "Uber"
 - "spent fifty on coffee" → "Coffee"
-- "bought those wireless headphones from Amazon" → "Wireless headphones"
+- "bought wireless headphones from Amazon" → "Wireless headphones"
 
 SPECIAL CASES:
 - Zero amount ("free coffee"): amount=0, confidence.amount=0.1
 - Negative amount ("-50 from Amazon"): amount=50 (absolute), type="income"
-- Refund keywords: type="income", category="Shopping" or wherever the refund is from
-- Person name as expense ("paid John 200"): name="John", category=null (confidence.category=0.0)
-- Vague ("stuff 50", "thing for mom"): name as-is, confidence.category=0.0-0.2
+- Refund keywords: type="income", category="Refund"
+- Person name as expense ("paid John 200"): name="John", category=null
+- Vague ("stuff 50", "thing for mom"): name as-is, category=null
 
 EXAMPLES:
-"coffee 50" → { name:"Coffee", amount:50, type:"expense", category:"Dining", frequency:"none", tags:[], confidence:{name:0.95,amount:0.95,category:0.95,frequency:0.99} }
-"monthly gym subscription 49.99" → { name:"Gym subscription", amount:49.99, type:"expense", category:"Fitness", frequency:"monthly", tags:[], confidence:{name:0.95,amount:0.99,category:0.95,frequency:0.95} }
-"rent 2000" → { name:"Rent", amount:2000, type:"expense", category:"Housing", frequency:"none", tags:[], confidence:{name:0.99,amount:0.99,category:0.95,frequency:0.99} }
-"uber to airport" → { name:"Uber", amount:null, type:"expense", category:"Transport", frequency:"none", tags:[], confidence:{name:0.99,amount:0,category:0.95,frequency:0.99} }
-"January salary 4000" → { name:"January salary", amount:4000, type:"income", category:"Income", frequency:"none", tags:[], confidence:{name:0.95,amount:0.99,category:0.99,frequency:0.99} }
-"fifty bucks" → { name:null, amount:50, type:"expense", category:null, frequency:"none", tags:[], confidence:{name:0,amount:0.85,category:0,frequency:0.99} }
-"Amazon refund 30" → { name:"Amazon refund", amount:30, type:"income", category:"Shopping", frequency:"none", tags:[], confidence:{name:0.9,amount:0.99,category:0.7,frequency:0.99} }
-"Sarah 50" → { name:"Sarah", amount:50, type:"expense", category:null, frequency:"none", tags:[], confidence:{name:0.9,amount:0.99,category:0.1,frequency:0.99} }
+"coffee 50" → {name:"Coffee",amount:50,type:"expense",category:"Coffee & Cafes",frequency:"none",tags:[],confidence:{name:0.95,amount:0.95,category:0.95,frequency:0.99}}
+"monthly gym subscription 49.99" → {name:"Gym subscription",amount:49.99,type:"expense",category:"Gym & Sports",frequency:"monthly",tags:[],confidence:{name:0.95,amount:0.99,category:0.95,frequency:0.95}}
+"rent 2000" → {name:"Rent",amount:2000,type:"expense",category:"Rent",frequency:"none",tags:[],confidence:{name:0.99,amount:0.99,category:0.97,frequency:0.99}}
+"uber to airport" → {name:"Uber",amount:null,type:"expense",category:"Ride-hailing",frequency:"none",tags:[],confidence:{name:0.99,amount:0,category:0.93,frequency:0.99}}
+"January salary 4000" → {name:"January salary",amount:4000,type:"income",category:"Salary",frequency:"none",tags:[],confidence:{name:0.95,amount:0.99,category:0.99,frequency:0.99}}
+"amazon refund 30" → {name:"Amazon refund",amount:30,type:"income",category:"Refund",frequency:"none",tags:[],confidence:{name:0.9,amount:0.99,category:0.92,frequency:0.99}}
+"netflix 15" → {name:"Netflix",amount:15,type:"expense",category:"Streaming",frequency:"none",tags:[],confidence:{name:0.99,amount:0.99,category:0.98,frequency:0.99}}
+"dinner 60" → {name:"Dinner",amount:60,type:"expense",category:"Restaurants",frequency:"none",tags:[],confidence:{name:0.95,amount:0.99,category:0.82,frequency:0.99}}
+"CVS 30" → {name:"CVS",amount:30,type:"expense",category:null,frequency:"none",tags:[],confidence:{name:0.95,amount:0.99,category:0.55,frequency:0.99}}
+"fifty bucks" → {name:null,amount:50,type:"expense",category:null,frequency:"none",tags:[],confidence:{name:0,amount:0.85,category:0,frequency:0.99}}
 
 Return ONLY valid JSON. No markdown, no explanation.`
 

@@ -1,6 +1,18 @@
 <!doctype html>
 <html lang="en">
   <head>
+    <!-- Flash prevention: apply theme before React hydrates -->
+    <script>
+      (function() {
+        try {
+          var theme = localStorage.getItem('cent_theme') || 'auto';
+          var dark = theme === 'dark' ||
+            (theme === 'auto' && window.matchMedia('(prefers-color-scheme: dark)').matches);
+          if (dark) document.documentElement.classList.add('dark');
+        } catch(e) {}
+      })();
+    </script>
+
     <meta charset="UTF-8" />
     <link rel="icon" type="image/svg+xml" href="/vite.svg" />
     <meta name="viewport" content="width=device-width, initial-scale=1.0, viewport-fit=cover" />
