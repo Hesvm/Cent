@@ -1,4 +1,5 @@
-import { SignedIn, SignedOut, RedirectToSignIn } from '@clerk/clerk-react'
+import { SignedIn, SignedOut } from '@clerk/clerk-react'
+import { AuthSheet } from './components/ui/AuthSheet'
 import { MockExpenseProvider } from './context/MockExpenseContext'
 import { Header } from './components/layout/Header'
 import { TransactionList } from './components/transactions/TransactionList'
@@ -19,7 +20,7 @@ export default function App() {
         </MockExpenseProvider>
       </SignedIn>
       <SignedOut>
-        <RedirectToSignIn />
+        <AuthSheet />
       </SignedOut>
     </>
   )
