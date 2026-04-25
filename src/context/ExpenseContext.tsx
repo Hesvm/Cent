@@ -205,6 +205,7 @@ export function ExpenseProvider({ children }: { children: ReactNode }) {
       .single()
 
     if (error || !data) {
+      console.error('[addTransaction] Supabase error:', error)
       setTransactions((prev) => prev.filter((x) => x.id !== optimistic.id))
       throw error
     }
