@@ -350,7 +350,7 @@ export function InputBar() {
   const showAmountPicker = inputState === 'clarifying' && isAskingAmount
 
   return (
-    <div className="bg-bg-page safe-bottom">
+    <div className="bg-bg-page safe-bottom flex-shrink-0">
       {/* Status messages */}
       {isOffline && (
         <p className="text-center text-expense text-[12px] py-1">Offline</p>
@@ -398,7 +398,7 @@ export function InputBar() {
       )}
 
       {/* Main input row */}
-      <div className="flex items-center gap-1.5 px-2 py-2">
+      <div className="flex items-center gap-2 px-3 py-2">
         {/* Voice active: hide text input, show only VoiceButton centered */}
         {voice.isSupported && (voice.state === 'listening' || voice.state === 'recording' || voice.state === 'processing') ? (
           <div className="flex-1 flex items-center justify-center py-1">
@@ -431,7 +431,7 @@ export function InputBar() {
               {isTyping && (
                 <button onClick={handleSend} aria-label="Send" className="flex-shrink-0 animate-scale-in">
                   {selectedType === 'income' ? (
-                    <svg width="40" height="40" viewBox="0 0 30 30" fill="none" xmlns="http://www.w3.org/2000/svg">
+                    <svg width="32" height="32" viewBox="0 0 30 30" fill="none" xmlns="http://www.w3.org/2000/svg">
                       <g filter="url(#income_shadow)">
                         <rect width="30" height="30" rx="15" fill="#32B250"/>
                         <path d="M15.5 9L10 14.168M15.5 9L21 14.168M15.5 9V21" stroke="white" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round"/>
@@ -450,7 +450,7 @@ export function InputBar() {
                       </defs>
                     </svg>
                   ) : (
-                    <svg width="40" height="40" viewBox="0 0 30 30" fill="none" xmlns="http://www.w3.org/2000/svg">
+                    <svg width="32" height="32" viewBox="0 0 30 30" fill="none" xmlns="http://www.w3.org/2000/svg">
                       <g filter="url(#expense_shadow)">
                         <rect width="30" height="30" rx="15" fill="#E02F44"/>
                         <path d="M15.5 9L10 14.168M15.5 9L21 14.168M15.5 9V21" stroke="white" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round"/>
