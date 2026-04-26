@@ -36,11 +36,12 @@ interface TransactionRowProps {
   onClick: () => void
   isLast: boolean
   isPending?: boolean
+  onFrequencyPillClick?: (frequency: string) => void
 }
 
 const MAX_NAME_LENGTH = 24
 
-export function TransactionRow({ transaction, onClick, isLast, isPending }: TransactionRowProps) {
+export function TransactionRow({ transaction, onClick, isLast, isPending, onFrequencyPillClick }: TransactionRowProps) {
   const { name, amount, type, category, frequency } = transaction
   const isIncome = type === 'income'
   const displayName = name.length > MAX_NAME_LENGTH ? name.slice(0, MAX_NAME_LENGTH) + '…' : name
@@ -64,7 +65,26 @@ export function TransactionRow({ transaction, onClick, isLast, isPending }: Tran
           </span>
           {category && <CategoryPill label={category} />}
           {showFrequency && (
-            <CategoryPill label={frequency.charAt(0).toUpperCase() + frequency.slice(1)} />
+            onFrequencyPillClick ? (
+              <button
+                onClick={(e) => { e.stopPropagation(); onFrequencyPillClick(frequency) }}
+                className="inline-flex items-center rounded-pill whitespace-nowrap font-rounded"
+                style={{
+                  fontSize: 11,
+                  fontWeight: 400,
+                  color: 'var(--color-text-secondary)',
+                  background: 'var(--color-bg-tertiary)',
+                  padding: '3px 8px',
+                  maxWidth: 120,
+                  overflow: 'hidden',
+                  textOverflow: 'ellipsis',
+                }}
+              >
+                {frequency.charAt(0).toUpperCase() + frequency.slice(1)}
+              </button>
+            ) : (
+              <CategoryPill label={frequency.charAt(0).toUpperCase() + frequency.slice(1)} />
+            )
           )}
           {isPending && (
             <span className="text-[10px] text-text-hint">saving…</span>

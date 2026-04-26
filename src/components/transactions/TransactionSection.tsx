@@ -7,9 +7,10 @@ interface TransactionSectionProps {
   date: Date
   transactions: Transaction[]
   onRowClick: (t: Transaction) => void
+  onFrequencyPillClick?: (frequency: string) => void
 }
 
-export function TransactionSection({ date, transactions, onRowClick }: TransactionSectionProps) {
+export function TransactionSection({ date, transactions, onRowClick, onFrequencyPillClick }: TransactionSectionProps) {
   const label = formatSectionDate(date)
   const isToday = label === 'Today'
 
@@ -35,6 +36,7 @@ export function TransactionSection({ date, transactions, onRowClick }: Transacti
               transaction={t}
               onClick={() => onRowClick(t)}
               isLast={i === transactions.length - 1}
+              onFrequencyPillClick={onFrequencyPillClick}
             />
           </div>
         ))}

@@ -5,13 +5,25 @@ import { TransactionSection } from './TransactionSection'
 import { TransactionDetail } from './TransactionDetail'
 import { SkeletonSection } from '../ui/SkeletonRow'
 import { isSameDay } from '../../utils/formatDate'
+import { RecurringHub } from '../RecurringHub'
 
 const PAGE_SIZE = 30
 
 export function TransactionList() {
   const { transactions, isLoading } = useExpense()
   const [selected, setSelected] = useState<Transaction | null>(null)
+  const [recurringHubOpen, setRecurringHubOpen] = useState(false)
+  const [recurringHubFilter, setRecurringHubFilter] = useState<'all' | 'monthly' | 'weekly' | 'yearly' | 'daily'>('all')
   const [page, setPage] = useState(1)
+
+  function openRecurringHub(frequency: string) {
+    const validFreqs = ['monthly', 'weekly', 'yearly', 'daily'] as const
+    const filter = (validFreqs as readonly string[]).includes(frequency)
+      ? frequency as typeof validFreqs[number]
+      : 'all'
+    setRecurringHubFilter(filter)
+    setRecurringHubOpen(true)
+  }
   const scrollRef = useRef<HTMLDivElement>(null)
   const topRef = useRef<HTMLDivElement>(null)
   const didScrollToBottom = useRef(false)
@@ -86,6 +98,7 @@ export function TransactionList() {
             date={group.date}
             transactions={group.items}
             onRowClick={setSelected}
+            onFrequencyPillClick={openRecurringHub}
           />
         ))}
         {/* breathing room between the last transaction and the input bar */}
@@ -98,6 +111,12 @@ export function TransactionList() {
           onClose={() => setSelected(null)}
         />
       )}
+
+      <RecurringHub
+        isOpen={recurringHubOpen}
+        onClose={() => setRecurringHubOpen(false)}
+        defaultFrequency={recurringHubFilter}
+      />
     </>
   )
 }
