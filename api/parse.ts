@@ -1,4 +1,15 @@
 import type { VercelRequest, VercelResponse } from '@vercel/node'
+import { CATEGORY_RULES } from '../src/data/categoryRules'
+
+function matchByKeyword(transactionName: string): string | null {
+  const name = transactionName.toLowerCase()
+  for (const [slug, rule] of Object.entries(CATEGORY_RULES)) {
+    if (rule.keywords.some(kw => name.includes(kw))) {
+      return slug
+    }
+  }
+  return null
+}
 
 const SYSTEM_PROMPT = `You are a financial expense parser for Cent, a minimal expense tracker.
 
@@ -83,6 +94,21 @@ export default async function handler(req: VercelRequest, res: VercelResponse) {
     return res.status(400).json({ error: 'Missing text' })
   }
 
+  // Fast path: keyword match skips Gemini entirely
+  const keywordMatch = matchByKeyword(text)
+  if (keywordMatch) {
+    return res.status(200).json({
+      name: null,
+      amount: null,
+      type: type ?? 'expense',
+      category: keywordMatch,
+      frequency: 'none',
+      tags: [],
+      confidence: { name: 0, amount: 0, category: 1.0, frequency: 0.99 },
+      source: 'keyword',
+    })
+  }
+
   const apiKey = process.env.GEMINI_API_KEY
   if (!apiKey) {
     return res.status(500).json({ error: 'GEMINI_API_KEY not configured' })
@@ -91,8 +117,15 @@ export default async function handler(req: VercelRequest, res: VercelResponse) {
   try {
     const url = `https://generativelanguage.googleapis.com/v1beta/models/${GEMINI_MODEL}:generateContent?key=${apiKey}`
 
+    const categoryContext = Object.entries(CATEGORY_RULES)
+      .filter(([, rule]) => rule.description)
+      .map(([slug, rule]) => `- ${slug}: ${rule.description}`)
+      .join('\n')
+
+    const systemPromptWithContext = SYSTEM_PROMPT + `\n\nADDITIONAL CATEGORY CONTEXT:\n${categoryContext}`
+
     const body = {
-      system_instruction: { parts: [{ text: SYSTEM_PROMPT }] },
+      system_instruction: { parts: [{ text: systemPromptWithContext }] },
       contents: [{
         role: 'user',
         parts: [{ text: `User-selected type: "${type}". Parse: "${text}"` }],
