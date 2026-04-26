@@ -200,6 +200,7 @@ export function ExpenseProvider({ children }: { children: ReactNode }) {
         notes: t.notes ?? '',
         account: t.account ?? null,
         emoji: t.emoji,
+        last_logged_at: new Date().toISOString(),
       })
       .select()
       .single()
