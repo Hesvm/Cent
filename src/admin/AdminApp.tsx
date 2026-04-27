@@ -1,6 +1,7 @@
 import { useState, useEffect, useRef } from 'react'
 import { CATEGORIES, CategoryItem } from '../data/categories'
 import { CATEGORY_RULES } from '../data/categoryRules'
+import { supabase } from '../lib/supabase'
 
 // ─── Types ────────────────────────────────────────────────────────────────────
 
@@ -157,37 +158,53 @@ function LoginScreen({ onAuth }: { onAuth: (password: string) => void }) {
 
 // ─── Image uploader ───────────────────────────────────────────────────────────
 
-function ImageUploader({ slug, adminPassword, onToast }: { slug: string; adminPassword: string; onToast: (msg: string) => void }) {
+const BUCKET = 'category-images'
+
+function ImageUploader({ slug, onToast }: { slug: string; onToast: (msg: string) => void }) {
   const [preview, setPreview] = useState<string | null>(null)
   const [status, setStatus] = useState<string | null>(null)
   const [uploading, setUploading] = useState(false)
   const fileRef = useRef<HTMLInputElement>(null)
-  const imgSrc = `/categories/${slug}.webp`
+
+  // Load existing image from Supabase on mount / slug change
+  useEffect(() => {
+    setPreview(null)
+    setStatus(null)
+    const { data } = supabase.storage.from(BUCKET).getPublicUrl(`${slug}.webp`)
+    // Probe if it exists
+    fetch(data.publicUrl, { method: 'HEAD' })
+      .then(r => { if (r.ok) setPreview(data.publicUrl) })
+      .catch(() => {})
+  }, [slug])
 
   async function handleFile(e: React.ChangeEvent<HTMLInputElement>) {
     const file = e.target.files?.[0]
     if (!file) return
     setStatus('Compressing…')
+    setUploading(true)
     try {
       const { dataUrl, sizeKB, origKB } = await compressImage(file)
-      setPreview(dataUrl)
-      setStatus(origKB > 150 ? `Compressed ${origKB}KB → ${sizeKB}KB` : `${sizeKB}KB — ready to upload`)
-      setUploading(true)
-      const res = await fetch('/api/admin-upload', {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json', 'x-admin-password': adminPassword },
-        body: JSON.stringify({ slug, dataUrl }),
-      })
-      if (res.ok) {
-        onToast('Image saved')
-        setStatus(`Saved · ${sizeKB}KB`)
-      } else {
-        onToast('Upload failed')
-        setStatus('Upload failed')
-      }
-    } catch {
-      onToast('Compression failed')
-      setStatus('Error')
+      setStatus(origKB > 150 ? `Compressed ${origKB}KB → ${sizeKB}KB` : `${sizeKB}KB`)
+
+      // Convert dataUrl to Blob
+      const base64 = dataUrl.split(',')[1]
+      const bytes = Uint8Array.from(atob(base64), c => c.charCodeAt(0))
+      const blob = new Blob([bytes], { type: 'image/webp' })
+
+      const { error } = await supabase.storage
+        .from(BUCKET)
+        .upload(`${slug}.webp`, blob, { upsert: true, contentType: 'image/webp' })
+
+      if (error) throw error
+
+      const { data } = supabase.storage.from(BUCKET).getPublicUrl(`${slug}.webp`)
+      setPreview(data.publicUrl + '?t=' + Date.now()) // bust cache
+      setStatus(`Saved · ${sizeKB}KB`)
+      onToast('Image saved')
+    } catch (err) {
+      console.error(err)
+      onToast('Upload failed')
+      setStatus('Upload failed')
     } finally {
       setUploading(false)
       if (fileRef.current) fileRef.current.value = ''
@@ -200,13 +217,11 @@ function ImageUploader({ slug, adminPassword, onToast }: { slug: string; adminPa
         Category Image
       </label>
       <div className="flex items-center gap-4">
-        <div className="w-14 h-14 rounded-xl bg-zinc-800 border border-zinc-700 overflow-hidden shrink-0 flex items-center justify-center">
-          <img
-            src={preview ?? imgSrc}
-            alt=""
-            className="w-full h-full object-cover"
-            onError={e => { (e.target as HTMLImageElement).style.display = 'none' }}
-          />
+        <div className="w-14 h-14 rounded-xl bg-zinc-800 border border-zinc-700 overflow-hidden shrink-0 flex items-center justify-center text-2xl">
+          {preview
+            ? <img src={preview} alt="" className="w-full h-full object-cover" />
+            : <span className="text-zinc-600">?</span>
+          }
         </div>
         <div className="flex flex-col gap-1.5">
           <button
@@ -244,7 +259,7 @@ function KeywordPill({ label, onRemove }: { label: string; onRemove: () => void 
 // ─── Category editor ──────────────────────────────────────────────────────────
 
 function CategoryEditor({
-  category, rule, onChange, onSave, onClear, isSaving, adminPassword, onToast,
+  category, rule, onChange, onSave, onClear, isSaving, onToast,
 }: {
   category: CategoryItem
   rule: RuleState
@@ -252,7 +267,6 @@ function CategoryEditor({
   onSave: () => void
   onClear: () => void
   isSaving: boolean
-  adminPassword: string
   onToast: (msg: string) => void
 }) {
   const [newKeyword, setNewKeyword] = useState('')
@@ -283,7 +297,7 @@ function CategoryEditor({
       <div className="flex-1 overflow-y-auto px-6 py-5 space-y-6">
 
         {/* Image */}
-        <ImageUploader slug={category.slug} adminPassword={adminPassword} onToast={onToast} />
+        <ImageUploader slug={category.slug} onToast={onToast} />
 
         {/* Keywords */}
         <section>
@@ -538,7 +552,6 @@ function Dashboard({ adminPassword, onLogout }: { adminPassword: string; onLogou
               onSave={saveToFile}
               onClear={() => setRules(prev => ({ ...prev, [selectedSlug]: { keywords: [], description: '' } }))}
               isSaving={isSaving}
-              adminPassword={adminPassword}
               onToast={showToast}
             />
           </div>
