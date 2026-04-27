@@ -54,6 +54,46 @@ function buildExportTs(rules: RulesState): string {
   return lines.join('\n')
 }
 
+async function compressImage(file: File, maxKB = 150): Promise<{ dataUrl: string; sizeKB: number; origKB: number }> {
+  const origKB = Math.round(file.size / 1024)
+  return new Promise((resolve, reject) => {
+    const img = new Image()
+    const url = URL.createObjectURL(file)
+    img.onload = () => {
+      URL.revokeObjectURL(url)
+      const MAX_DIM = 512
+      let { width, height } = img
+      if (width > MAX_DIM || height > MAX_DIM) {
+        if (width > height) { height = Math.round(height * MAX_DIM / width); width = MAX_DIM }
+        else { width = Math.round(width * MAX_DIM / height); height = MAX_DIM }
+      }
+      const canvas = document.createElement('canvas')
+      canvas.width = width
+      canvas.height = height
+      canvas.getContext('2d')!.drawImage(img, 0, 0, width, height)
+
+      let quality = 0.9
+      const attempt = () => {
+        canvas.toBlob(blob => {
+          if (!blob) { reject(new Error('Compression failed')); return }
+          const sizeKB = Math.round(blob.size / 1024)
+          if (sizeKB <= maxKB || quality <= 0.2) {
+            const reader = new FileReader()
+            reader.onload = () => resolve({ dataUrl: reader.result as string, sizeKB, origKB })
+            reader.readAsDataURL(blob)
+          } else {
+            quality = Math.round((quality - 0.1) * 10) / 10
+            attempt()
+          }
+        }, 'image/webp', quality)
+      }
+      attempt()
+    }
+    img.onerror = reject
+    img.src = url
+  })
+}
+
 // ─── Login ────────────────────────────────────────────────────────────────────
 
 function LoginScreen({ onAuth }: { onAuth: (password: string) => void }) {
@@ -79,33 +119,33 @@ function LoginScreen({ onAuth }: { onAuth: (password: string) => void }) {
         setError('Incorrect password')
       }
     } catch {
-      setError('Network error — check console')
+      setError('Network error')
     } finally {
       setLoading(false)
     }
   }
 
   return (
-    <div className="min-h-screen bg-gray-50 flex items-center justify-center">
-      <div className="bg-white border border-gray-200 rounded-xl p-8 w-80 shadow-sm">
+    <div className="min-h-screen bg-zinc-950 flex items-center justify-center">
+      <div className="bg-zinc-900 border border-zinc-800 rounded-xl p-8 w-80">
         <div className="mb-6">
-          <p className="font-mono text-xs text-gray-400 mb-1">cent /</p>
-          <h1 className="font-mono text-xl font-semibold text-gray-900">admin</h1>
+          <p className="font-mono text-xs text-zinc-500 mb-1">cent /</p>
+          <h1 className="font-mono text-xl font-semibold text-white">admin</h1>
         </div>
-        <form onSubmit={handleSubmit} className="space-y-4">
+        <form onSubmit={handleSubmit} className="space-y-3">
           <input
             type="password"
             value={password}
             onChange={e => setPassword(e.target.value)}
             placeholder="Password"
             autoFocus
-            className="w-full border border-gray-200 rounded-lg px-3 py-2 text-sm outline-none focus:border-gray-400 transition-colors"
+            className="w-full bg-zinc-800 border border-zinc-700 rounded-lg px-3 py-2 text-sm text-white placeholder-zinc-500 outline-none focus:border-zinc-500 transition-colors"
           />
-          {error && <p className="text-red-500 text-xs">{error}</p>}
+          {error && <p className="text-red-400 text-xs">{error}</p>}
           <button
             type="submit"
             disabled={loading || !password}
-            className="w-full bg-gray-900 text-white rounded-lg py-2 text-sm font-medium disabled:opacity-40 hover:bg-gray-700 transition-colors"
+            className="w-full bg-white text-black rounded-lg py-2 text-sm font-medium disabled:opacity-30 hover:bg-zinc-200 transition-colors"
           >
             {loading ? 'Checking…' : 'Login'}
           </button>
@@ -115,19 +155,88 @@ function LoginScreen({ onAuth }: { onAuth: (password: string) => void }) {
   )
 }
 
+// ─── Image uploader ───────────────────────────────────────────────────────────
+
+function ImageUploader({ slug, adminPassword, onToast }: { slug: string; adminPassword: string; onToast: (msg: string) => void }) {
+  const [preview, setPreview] = useState<string | null>(null)
+  const [status, setStatus] = useState<string | null>(null)
+  const [uploading, setUploading] = useState(false)
+  const fileRef = useRef<HTMLInputElement>(null)
+  const imgSrc = `/categories/${slug}.webp`
+
+  async function handleFile(e: React.ChangeEvent<HTMLInputElement>) {
+    const file = e.target.files?.[0]
+    if (!file) return
+    setStatus('Compressing…')
+    try {
+      const { dataUrl, sizeKB, origKB } = await compressImage(file)
+      setPreview(dataUrl)
+      setStatus(origKB > 150 ? `Compressed ${origKB}KB → ${sizeKB}KB` : `${sizeKB}KB — ready to upload`)
+      setUploading(true)
+      const res = await fetch('/api/admin-upload', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json', 'x-admin-password': adminPassword },
+        body: JSON.stringify({ slug, dataUrl }),
+      })
+      if (res.ok) {
+        onToast('Image saved')
+        setStatus(`Saved · ${sizeKB}KB`)
+      } else {
+        onToast('Upload failed')
+        setStatus('Upload failed')
+      }
+    } catch {
+      onToast('Compression failed')
+      setStatus('Error')
+    } finally {
+      setUploading(false)
+      if (fileRef.current) fileRef.current.value = ''
+    }
+  }
+
+  return (
+    <section>
+      <label className="block text-[10px] font-semibold text-zinc-500 uppercase tracking-widest mb-2">
+        Category Image
+      </label>
+      <div className="flex items-center gap-4">
+        <div className="w-14 h-14 rounded-xl bg-zinc-800 border border-zinc-700 overflow-hidden shrink-0 flex items-center justify-center">
+          <img
+            src={preview ?? imgSrc}
+            alt=""
+            className="w-full h-full object-cover"
+            onError={e => { (e.target as HTMLImageElement).style.display = 'none' }}
+          />
+        </div>
+        <div className="flex flex-col gap-1.5">
+          <button
+            onClick={() => fileRef.current?.click()}
+            disabled={uploading}
+            className="bg-zinc-800 border border-zinc-700 text-zinc-300 rounded-lg px-3 py-1.5 text-xs hover:bg-zinc-700 hover:border-zinc-600 transition-colors disabled:opacity-40"
+          >
+            {uploading ? 'Uploading…' : 'Upload PNG / JPG'}
+          </button>
+          {status && <p className="text-[11px] text-zinc-500 font-mono">{status}</p>}
+        </div>
+      </div>
+      <input
+        ref={fileRef}
+        type="file"
+        accept="image/png,image/jpeg,image/webp"
+        onChange={handleFile}
+        className="hidden"
+      />
+    </section>
+  )
+}
+
 // ─── Keyword pill ─────────────────────────────────────────────────────────────
 
 function KeywordPill({ label, onRemove }: { label: string; onRemove: () => void }) {
   return (
-    <span className="inline-flex items-center gap-1 bg-blue-50 text-blue-700 border border-blue-100 rounded-full px-2.5 py-0.5 text-xs font-mono">
+    <span className="inline-flex items-center gap-1 bg-zinc-800 text-zinc-300 border border-zinc-700 rounded-full px-2.5 py-0.5 text-xs font-mono">
       {label}
-      <button
-        onClick={onRemove}
-        className="text-blue-400 hover:text-blue-700 leading-none"
-        aria-label={`Remove ${label}`}
-      >
-        ×
-      </button>
+      <button onClick={onRemove} className="text-zinc-500 hover:text-zinc-200 leading-none transition-colors">×</button>
     </span>
   )
 }
@@ -135,12 +244,7 @@ function KeywordPill({ label, onRemove }: { label: string; onRemove: () => void 
 // ─── Category editor ──────────────────────────────────────────────────────────
 
 function CategoryEditor({
-  category,
-  rule,
-  onChange,
-  onSave,
-  onClear,
-  isSaving,
+  category, rule, onChange, onSave, onClear, isSaving, adminPassword, onToast,
 }: {
   category: CategoryItem
   rule: RuleState
@@ -148,6 +252,8 @@ function CategoryEditor({
   onSave: () => void
   onClear: () => void
   isSaving: boolean
+  adminPassword: string
+  onToast: (msg: string) => void
 }) {
   const [newKeyword, setNewKeyword] = useState('')
   const inputRef = useRef<HTMLInputElement>(null)
@@ -160,36 +266,36 @@ function CategoryEditor({
     inputRef.current?.focus()
   }
 
-  function removeKeyword(kw: string) {
-    onChange({ ...rule, keywords: rule.keywords.filter(k => k !== kw) })
-  }
-
   return (
-    <div className="flex flex-col h-full">
+    <div className="flex flex-col h-full bg-zinc-950">
       {/* Header */}
-      <div className="px-6 py-4 border-b border-gray-100">
-        <div className="flex items-center gap-2">
+      <div className="px-6 py-4 border-b border-zinc-800">
+        <div className="flex items-center gap-3">
           <span className="text-2xl">{category.emoji}</span>
           <div>
-            <h2 className="font-semibold text-gray-900 text-base leading-tight">{category.name}</h2>
-            <p className="text-xs text-gray-400 font-mono">{category.slug} · {category.group}</p>
+            <h2 className="font-semibold text-white text-base leading-tight">{category.name}</h2>
+            <p className="text-xs text-zinc-500 font-mono">{category.slug} · {category.group}</p>
           </div>
         </div>
       </div>
 
       {/* Body */}
       <div className="flex-1 overflow-y-auto px-6 py-5 space-y-6">
+
+        {/* Image */}
+        <ImageUploader slug={category.slug} adminPassword={adminPassword} onToast={onToast} />
+
         {/* Keywords */}
         <section>
-          <label className="block text-xs font-semibold text-gray-500 uppercase tracking-wide mb-2">
+          <label className="block text-[10px] font-semibold text-zinc-500 uppercase tracking-widest mb-2">
             Keywords
           </label>
           <div className="flex flex-wrap gap-1.5 mb-3 min-h-[28px]">
             {rule.keywords.length === 0 && (
-              <span className="text-xs text-gray-300 italic">No keywords yet</span>
+              <span className="text-xs text-zinc-600 italic">No keywords yet</span>
             )}
             {rule.keywords.map(kw => (
-              <KeywordPill key={kw} label={kw} onRemove={() => removeKeyword(kw)} />
+              <KeywordPill key={kw} label={kw} onRemove={() => onChange({ ...rule, keywords: rule.keywords.filter(k => k !== kw) })} />
             ))}
           </div>
           <div className="flex gap-2">
@@ -200,12 +306,12 @@ function CategoryEditor({
               onChange={e => setNewKeyword(e.target.value)}
               onKeyDown={e => e.key === 'Enter' && (e.preventDefault(), addKeyword())}
               placeholder="Add keyword…"
-              className="flex-1 border border-gray-200 rounded-lg px-3 py-1.5 text-sm outline-none focus:border-gray-400 transition-colors font-mono"
+              className="flex-1 bg-zinc-900 border border-zinc-700 rounded-lg px-3 py-1.5 text-sm text-white placeholder-zinc-600 outline-none focus:border-zinc-500 transition-colors font-mono"
             />
             <button
               onClick={addKeyword}
               disabled={!newKeyword.trim()}
-              className="bg-gray-900 text-white rounded-lg px-3 py-1.5 text-sm font-medium disabled:opacity-30 hover:bg-gray-700 transition-colors"
+              className="bg-white text-black rounded-lg px-3 py-1.5 text-sm font-medium disabled:opacity-20 hover:bg-zinc-200 transition-colors"
             >
               Add
             </button>
@@ -214,7 +320,7 @@ function CategoryEditor({
 
         {/* Description */}
         <section>
-          <label className="block text-xs font-semibold text-gray-500 uppercase tracking-wide mb-2">
+          <label className="block text-[10px] font-semibold text-zinc-500 uppercase tracking-widest mb-2">
             AI Description
           </label>
           <textarea
@@ -222,26 +328,26 @@ function CategoryEditor({
             onChange={e => onChange({ ...rule, description: e.target.value })}
             rows={5}
             placeholder="Describe what belongs in this category and what doesn't — written for the AI."
-            className="w-full border border-gray-200 rounded-lg px-3 py-2 text-sm outline-none focus:border-gray-400 transition-colors resize-none leading-relaxed"
+            className="w-full bg-zinc-900 border border-zinc-700 rounded-lg px-3 py-2 text-sm text-white placeholder-zinc-600 outline-none focus:border-zinc-500 transition-colors resize-none leading-relaxed"
           />
-          <p className="text-xs text-gray-400 mt-1">Used in Gemini prompt when keywords don't match</p>
+          <p className="text-xs text-zinc-600 mt-1">Used in Gemini prompt when keywords don't match</p>
         </section>
       </div>
 
-      {/* Footer actions */}
-      <div className="px-6 py-4 border-t border-gray-100 flex gap-2">
+      {/* Footer */}
+      <div className="px-6 py-4 border-t border-zinc-800 flex gap-2">
         <button
           onClick={onSave}
           disabled={isSaving}
-          className="flex-1 bg-gray-900 text-white rounded-lg py-2 text-sm font-medium disabled:opacity-40 hover:bg-gray-700 transition-colors"
+          className="flex-1 bg-white text-black rounded-lg py-2 text-sm font-medium disabled:opacity-30 hover:bg-zinc-200 transition-colors"
         >
           {isSaving ? 'Saving…' : 'Save to file'}
         </button>
         <button
           onClick={onClear}
-          className="border border-gray-200 text-gray-500 rounded-lg px-4 py-2 text-sm hover:border-gray-400 hover:text-gray-700 transition-colors"
+          className="border border-zinc-700 text-zinc-500 rounded-lg px-4 py-2 text-sm hover:border-zinc-500 hover:text-zinc-300 transition-colors"
         >
-          Clear rules
+          Clear
         </button>
       </div>
     </div>
@@ -251,24 +357,11 @@ function CategoryEditor({
 // ─── Sidebar ──────────────────────────────────────────────────────────────────
 
 const GROUP_ORDER = [
-  'Food & Drink',
-  'Housing & Bills',
-  'Entertainment',
-  'Transport',
-  'Health & Fitness',
-  'Shopping & Lifestyle',
-  'Work & Finance',
-  'Income',
-  'Other',
+  'Food & Drink', 'Housing & Bills', 'Entertainment', 'Transport',
+  'Health & Fitness', 'Shopping & Lifestyle', 'Work & Finance', 'Income', 'Other',
 ]
 
-function Sidebar({
-  rules,
-  selectedSlug,
-  search,
-  onSearch,
-  onSelect,
-}: {
+function Sidebar({ rules, selectedSlug, search, onSearch, onSelect }: {
   rules: RulesState
   selectedSlug: string | null
   search: string
@@ -279,7 +372,6 @@ function Sidebar({
     cat.name.toLowerCase().includes(search.toLowerCase()) ||
     cat.slug.toLowerCase().includes(search.toLowerCase())
   )
-
   const byGroup: Record<string, CategoryItem[]> = {}
   for (const cat of filtered) {
     if (!byGroup[cat.group]) byGroup[cat.group] = []
@@ -287,20 +379,20 @@ function Sidebar({
   }
 
   return (
-    <div className="w-56 shrink-0 border-r border-gray-100 flex flex-col h-full bg-gray-50">
-      <div className="px-3 py-3 border-b border-gray-100">
+    <div className="w-56 shrink-0 border-r border-zinc-800 flex flex-col h-full bg-zinc-900">
+      <div className="px-3 py-3 border-b border-zinc-800">
         <input
           type="text"
           value={search}
           onChange={e => onSearch(e.target.value)}
           placeholder="Search categories…"
-          className="w-full bg-white border border-gray-200 rounded-lg px-2.5 py-1.5 text-xs outline-none focus:border-gray-400 transition-colors"
+          className="w-full bg-zinc-800 border border-zinc-700 rounded-lg px-2.5 py-1.5 text-xs text-white placeholder-zinc-500 outline-none focus:border-zinc-500 transition-colors"
         />
       </div>
       <div className="flex-1 overflow-y-auto py-2">
         {GROUP_ORDER.filter(g => byGroup[g]?.length).map(group => (
           <div key={group} className="mb-1">
-            <p className="px-3 py-1 text-[10px] font-semibold uppercase tracking-widest text-gray-400">
+            <p className="px-3 py-1 text-[10px] font-semibold uppercase tracking-widest text-zinc-600">
               {group}
             </p>
             {byGroup[group].map(cat => {
@@ -311,20 +403,14 @@ function Sidebar({
                   key={cat.slug}
                   onClick={() => onSelect(cat.slug)}
                   className={`w-full flex items-center gap-2 px-3 py-1.5 text-left text-xs transition-colors ${
-                    active
-                      ? 'bg-gray-900 text-white'
-                      : 'text-gray-700 hover:bg-gray-100'
+                    active ? 'bg-zinc-700 text-white' : 'text-zinc-400 hover:bg-zinc-800 hover:text-zinc-200'
                   }`}
                 >
                   <span className="text-sm shrink-0">{cat.emoji}</span>
                   <span className="flex-1 truncate">{cat.name}</span>
-                  <span
-                    className={`w-1.5 h-1.5 rounded-full shrink-0 ${
-                      defined
-                        ? active ? 'bg-green-400' : 'bg-green-500'
-                        : active ? 'bg-gray-500' : 'bg-gray-300'
-                    }`}
-                  />
+                  <span className={`w-1.5 h-1.5 rounded-full shrink-0 ${
+                    defined ? 'bg-green-500' : 'bg-zinc-700'
+                  }`} />
                 </button>
               )
             })}
@@ -350,25 +436,25 @@ function ExportPanel({ rules }: { rules: RulesState }) {
   }
 
   return (
-    <div className="border-t border-gray-100 px-6 py-4">
+    <div className="border-t border-zinc-800 bg-zinc-950 px-6 py-4">
       <div className="flex items-center gap-3 mb-3">
         <button
           onClick={() => setShow(v => !v)}
-          className="border border-gray-200 text-gray-600 rounded-lg px-3 py-1.5 text-xs hover:border-gray-400 transition-colors font-mono"
+          className="border border-zinc-700 text-zinc-400 rounded-lg px-3 py-1.5 text-xs hover:border-zinc-500 hover:text-zinc-200 transition-colors font-mono"
         >
           {show ? 'Hide export' : 'Export TypeScript'}
         </button>
         {show && (
           <button
             onClick={copy}
-            className="border border-gray-200 text-gray-600 rounded-lg px-3 py-1.5 text-xs hover:border-gray-400 transition-colors"
+            className="border border-zinc-700 text-zinc-400 rounded-lg px-3 py-1.5 text-xs hover:border-zinc-500 hover:text-zinc-200 transition-colors"
           >
             {copied ? 'Copied!' : 'Copy to clipboard'}
           </button>
         )}
       </div>
       {show && (
-        <pre className="bg-gray-900 text-gray-100 rounded-xl p-4 text-xs font-mono overflow-auto max-h-64 leading-relaxed">
+        <pre className="bg-zinc-900 border border-zinc-800 text-zinc-300 rounded-xl p-4 text-xs font-mono overflow-auto max-h-64 leading-relaxed">
           {ts}
         </pre>
       )}
@@ -380,7 +466,7 @@ function ExportPanel({ rules }: { rules: RulesState }) {
 
 function Toast({ message }: { message: string }) {
   return (
-    <div className="fixed bottom-6 left-1/2 -translate-x-1/2 bg-gray-900 text-white text-xs font-mono px-4 py-2 rounded-full shadow-lg z-50 animate-fade-in">
+    <div className="fixed bottom-6 left-1/2 -translate-x-1/2 bg-white text-black text-xs font-mono px-4 py-2 rounded-full shadow-xl z-50">
       {message}
     </div>
   )
@@ -403,30 +489,15 @@ function Dashboard({ adminPassword, onLogout }: { adminPassword: string; onLogou
     setTimeout(() => setToast(null), 2500)
   }
 
-  function updateRule(slug: string, rule: RuleState) {
-    setRules(prev => ({ ...prev, [slug]: rule }))
-  }
-
-  function clearRule(slug: string) {
-    setRules(prev => ({ ...prev, [slug]: { keywords: [], description: '' } }))
-  }
-
   async function saveToFile() {
     setIsSaving(true)
     try {
       const res = await fetch('/api/admin-save', {
         method: 'POST',
-        headers: {
-          'Content-Type': 'application/json',
-          'x-admin-password': adminPassword,
-        },
+        headers: { 'Content-Type': 'application/json', 'x-admin-password': adminPassword },
         body: JSON.stringify({ rules }),
       })
-      if (res.ok) {
-        showToast('Saved to categoryRules.ts')
-      } else {
-        showToast('Save failed — check console')
-      }
+      showToast(res.ok ? 'Saved to categoryRules.ts' : 'Save failed')
     } catch {
       showToast('Network error')
     } finally {
@@ -438,48 +509,37 @@ function Dashboard({ adminPassword, onLogout }: { adminPassword: string; onLogou
   const selectedRule = rules[selectedSlug]
 
   return (
-    <div className="flex flex-col h-screen bg-white">
+    <div className="flex flex-col h-screen bg-zinc-950">
       {/* Header */}
-      <div className="flex items-center justify-between px-6 py-3 border-b border-gray-100">
-        <div className="flex items-center gap-3">
-          <span className="font-mono text-xs text-gray-400">cent / admin</span>
+      <div className="flex items-center justify-between px-5 py-3 border-b border-zinc-800 bg-zinc-900">
+        <div className="flex items-center gap-4">
+          <span className="font-mono text-xs text-zinc-500">cent / admin</span>
           <div className="flex items-center gap-2">
-            <span className="text-xs text-gray-500">{definedCount} of {CATEGORIES.length} defined</span>
-            <div className="w-24 h-1 bg-gray-100 rounded-full overflow-hidden">
-              <div
-                className="h-full bg-green-500 rounded-full transition-all"
-                style={{ width: `${progress * 100}%` }}
-              />
+            <span className="text-xs text-zinc-500">{definedCount} of {CATEGORIES.length} defined</span>
+            <div className="w-24 h-1 bg-zinc-800 rounded-full overflow-hidden">
+              <div className="h-full bg-green-500 rounded-full transition-all" style={{ width: `${progress * 100}%` }} />
             </div>
           </div>
         </div>
-        <button
-          onClick={onLogout}
-          className="text-xs text-gray-400 hover:text-gray-700 transition-colors font-mono"
-        >
+        <button onClick={onLogout} className="text-xs text-zinc-600 hover:text-zinc-300 transition-colors font-mono">
           Logout
         </button>
       </div>
 
       {/* Body */}
       <div className="flex flex-1 min-h-0">
-        <Sidebar
-          rules={rules}
-          selectedSlug={selectedSlug}
-          search={search}
-          onSearch={setSearch}
-          onSelect={setSelectedSlug}
-        />
-
+        <Sidebar rules={rules} selectedSlug={selectedSlug} search={search} onSearch={setSearch} onSelect={setSelectedSlug} />
         <div className="flex-1 flex flex-col min-w-0">
           <div className="flex-1 min-h-0 overflow-hidden">
             <CategoryEditor
               category={selectedCategory}
               rule={selectedRule}
-              onChange={rule => updateRule(selectedSlug, rule)}
+              onChange={rule => setRules(prev => ({ ...prev, [selectedSlug]: rule }))}
               onSave={saveToFile}
-              onClear={() => clearRule(selectedSlug)}
+              onClear={() => setRules(prev => ({ ...prev, [selectedSlug]: { keywords: [], description: '' } }))}
               isSaving={isSaving}
+              adminPassword={adminPassword}
+              onToast={showToast}
             />
           </div>
           <ExportPanel rules={rules} />
@@ -500,16 +560,10 @@ export default function AdminApp() {
   useEffect(() => {
     const stored = localStorage.getItem('admin_authed')
     const pw = localStorage.getItem('admin_password')
-    if (stored === 'true' && pw) {
-      setAdminPassword(pw)
-      setAuthed(true)
-    }
+    if (stored === 'true' && pw) { setAdminPassword(pw); setAuthed(true) }
   }, [])
 
-  function handleAuth(password: string) {
-    setAdminPassword(password)
-    setAuthed(true)
-  }
+  function handleAuth(password: string) { setAdminPassword(password); setAuthed(true) }
 
   function handleLogout() {
     localStorage.removeItem('admin_authed')
@@ -518,9 +572,6 @@ export default function AdminApp() {
     setAdminPassword('')
   }
 
-  if (!authed) {
-    return <LoginScreen onAuth={handleAuth} />
-  }
-
+  if (!authed) return <LoginScreen onAuth={handleAuth} />
   return <Dashboard adminPassword={adminPassword} onLogout={handleLogout} />
 }
