@@ -1,5 +1,6 @@
 import { useState, useEffect } from 'react'
-import { getCategorySlug, getImageUrl, preloadAndCache } from '../../utils/transactionImages'
+import { getCategoryImage } from '../../utils/transactionImages'
+import { CATEGORY_FALLBACK_URL } from '../../config/categories'
 
 interface TransactionImageProps {
   category: string | null
@@ -8,20 +9,13 @@ interface TransactionImageProps {
 }
 
 export function TransactionImage({ category, name, size = 36 }: TransactionImageProps) {
-  const slug = getCategorySlug(category, name)
-  const fallbackUrl = getImageUrl(slug)
-  const [src, setSrc] = useState<string>(fallbackUrl)
+  const [src, setSrc] = useState(() => getCategoryImage(category))
   const [loaded, setLoaded] = useState(false)
 
   useEffect(() => {
-    let cancelled = false
-    setSrc(fallbackUrl)
+    setSrc(getCategoryImage(category))
     setLoaded(false)
-    preloadAndCache(slug).then((url) => {
-      if (!cancelled) setSrc(url)
-    })
-    return () => { cancelled = true }
-  }, [slug, fallbackUrl])
+  }, [category])
 
   return (
     <div
@@ -40,7 +34,7 @@ export function TransactionImage({ category, name, size = 36 }: TransactionImage
         className={`object-contain transition-opacity duration-200 ${loaded ? 'opacity-100' : 'opacity-0 absolute'}`}
         style={{ width: size, height: size }}
         onLoad={() => setLoaded(true)}
-        onError={() => setLoaded(true)}
+        onError={() => { setSrc(CATEGORY_FALLBACK_URL); setLoaded(true) }}
       />
     </div>
   )
