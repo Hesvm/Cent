@@ -1,10 +1,12 @@
 import type { VercelRequest, VercelResponse } from '@vercel/node'
-import { CATEGORY_RULES } from '../src/data/categoryRules'
+import { CATEGORY_RULES } from '../src/data/categoryRules.js'
+
+type CategoryRule = { keywords: string[]; description: string }
 
 function matchByKeyword(transactionName: string): string | null {
   const name = transactionName.toLowerCase()
-  for (const [slug, rule] of Object.entries(CATEGORY_RULES)) {
-    if (rule.keywords.some(kw => name.includes(kw))) {
+  for (const [slug, rule] of Object.entries(CATEGORY_RULES) as [string, CategoryRule][]) {
+    if (rule.keywords.some((kw: string) => name.includes(kw))) {
       return slug
     }
   }
@@ -117,7 +119,7 @@ export default async function handler(req: VercelRequest, res: VercelResponse) {
   try {
     const url = `https://generativelanguage.googleapis.com/v1beta/models/${GEMINI_MODEL}:generateContent?key=${apiKey}`
 
-    const categoryContext = Object.entries(CATEGORY_RULES)
+    const categoryContext = (Object.entries(CATEGORY_RULES) as [string, CategoryRule][])
       .filter(([, rule]) => rule.description)
       .map(([slug, rule]) => `- ${slug}: ${rule.description}`)
       .join('\n')
