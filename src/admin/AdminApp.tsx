@@ -1,4 +1,4 @@
-import { useState, useEffect, useRef } from 'react'
+import { useState, useEffect, useRef, useMemo } from 'react'
 import { CATEGORIES, CategoryItem } from '../data/categories'
 import { CATEGORY_RULES } from '../data/categoryRules'
 import { supabase } from '../lib/supabase'
@@ -161,20 +161,24 @@ function LoginScreen({ onAuth }: { onAuth: (password: string) => void }) {
 const BUCKET = 'category-images'
 
 function ImageUploader({ slug, onToast }: { slug: string; onToast: (msg: string) => void }) {
-  const [preview, setPreview] = useState<string | null>(null)
+  // cacheBuster forces the <img> to re-fetch after an upload
+  const [cacheBuster, setCacheBuster] = useState(0)
+  const [hasError, setHasError] = useState(false)
   const [status, setStatus] = useState<string | null>(null)
   const [uploading, setUploading] = useState(false)
   const fileRef = useRef<HTMLInputElement>(null)
 
-  // Load existing image from Supabase on mount / slug change
-  useEffect(() => {
-    setPreview(null)
-    setStatus(null)
+  // Recompute public URL whenever slug or cacheBuster changes
+  const imgSrc = useMemo(() => {
     const { data } = supabase.storage.from(BUCKET).getPublicUrl(`${slug}.webp`)
-    // Probe if it exists
-    fetch(data.publicUrl, { method: 'HEAD' })
-      .then(r => { if (r.ok) setPreview(data.publicUrl) })
-      .catch(() => {})
+    return cacheBuster > 0 ? `${data.publicUrl}?t=${cacheBuster}` : data.publicUrl
+  }, [slug, cacheBuster])
+
+  // Reset error state when switching categories
+  useEffect(() => {
+    setHasError(false)
+    setStatus(null)
+    setCacheBuster(0)
   }, [slug])
 
   async function handleFile(e: React.ChangeEvent<HTMLInputElement>) {
@@ -186,7 +190,6 @@ function ImageUploader({ slug, onToast }: { slug: string; onToast: (msg: string)
       const { dataUrl, sizeKB, origKB } = await compressImage(file)
       setStatus(origKB > 150 ? `Compressed ${origKB}KB → ${sizeKB}KB` : `${sizeKB}KB`)
 
-      // Convert dataUrl to Blob
       const base64 = dataUrl.split(',')[1]
       const bytes = Uint8Array.from(atob(base64), c => c.charCodeAt(0))
       const blob = new Blob([bytes], { type: 'image/webp' })
@@ -197,14 +200,15 @@ function ImageUploader({ slug, onToast }: { slug: string; onToast: (msg: string)
 
       if (error) throw error
 
-      const { data } = supabase.storage.from(BUCKET).getPublicUrl(`${slug}.webp`)
-      setPreview(data.publicUrl + '?t=' + Date.now()) // bust cache
+      // Bust the cache so the <img> re-fetches the new file
+      setHasError(false)
+      setCacheBuster(Date.now())
       setStatus(`Saved · ${sizeKB}KB`)
       onToast('Image saved')
     } catch (err) {
       console.error(err)
       onToast('Upload failed')
-      setStatus('Upload failed')
+      setStatus('Upload failed — check console')
     } finally {
       setUploading(false)
       if (fileRef.current) fileRef.current.value = ''
@@ -217,10 +221,16 @@ function ImageUploader({ slug, onToast }: { slug: string; onToast: (msg: string)
         Category Image
       </label>
       <div className="flex items-center gap-4">
-        <div className="w-14 h-14 rounded-xl bg-zinc-800 border border-zinc-700 overflow-hidden shrink-0 flex items-center justify-center text-2xl">
-          {preview
-            ? <img src={preview} alt="" className="w-full h-full object-cover" />
-            : <span className="text-zinc-600">?</span>
+        <div className="w-14 h-14 rounded-xl bg-zinc-800 border border-zinc-700 overflow-hidden shrink-0 flex items-center justify-center">
+          {hasError
+            ? <span className="text-zinc-600 text-xl">?</span>
+            : <img
+                key={imgSrc}
+                src={imgSrc}
+                alt=""
+                className="w-full h-full object-cover"
+                onError={() => setHasError(true)}
+              />
           }
         </div>
         <div className="flex flex-col gap-1.5">
@@ -229,7 +239,7 @@ function ImageUploader({ slug, onToast }: { slug: string; onToast: (msg: string)
             disabled={uploading}
             className="bg-zinc-800 border border-zinc-700 text-zinc-300 rounded-lg px-3 py-1.5 text-xs hover:bg-zinc-700 hover:border-zinc-600 transition-colors disabled:opacity-40"
           >
-            {uploading ? 'Uploading…' : 'Upload PNG / JPG'}
+            {uploading ? 'Uploading…' : uploading === false && !hasError && cacheBuster > 0 ? 'Replace image' : 'Upload PNG / JPG'}
           </button>
           {status && <p className="text-[11px] text-zinc-500 font-mono">{status}</p>}
         </div>
