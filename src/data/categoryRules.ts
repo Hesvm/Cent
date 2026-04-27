@@ -6,206 +6,127 @@ export type CategoryRule = {
 export type CategoryRulesMap = Record<string, CategoryRule>;
 
 // keywords = fast first-pass match (case-insensitive, substring)
-// description = injected into Gemini prompt when keywords don't match
+// description = injected into AI prompt when keywords don't match
+// Keys are the exact category names from the guide
 export const CATEGORY_RULES: CategoryRulesMap = {
-  'coffee': {
-    keywords: ['starbucks', 'costa', 'caffè nero', 'pret', 'tim hortons', 'dutch bros', 'espresso', 'latte', 'cappuccino', 'americano', 'coffee shop', 'café'],
-    description: 'Any purchase at a café, coffee shop, or espresso bar — including chain cafés like Starbucks or Costa, and independent coffee spots. Includes all hot and cold coffee-based drinks.',
+  'Restaurants & Dining': {
+    keywords: ['restaurant', 'eetcafé', 'pizzeria', 'sushi', 'burger', 'kebab', 'takeaway', 'food delivery', 'uber eats', 'deliveroo', 'thuisbezorgd', 'snackbar', 'diner', 'buffet', 'steakhouse', 'noodle', 'taco', 'food truck', 'catering', 'just eat', 'doordash', 'grubhub', 'bistro', 'brasserie', 'ramen', 'eatery', 'dining'],
+    description: 'Any sit-down meal, takeaway, fast food, food delivery, restaurant apps (Uber Eats, Deliveroo, Just Eat, DoorDash). Includes pizzerias, sushi bars, burger joints, kebab shops, cafeterias, diners, buffets, steakhouses, noodle bars, food trucks.',
   },
-  'restaurant': {
-    keywords: ['restaurant', 'diner', 'bistro', 'brasserie', 'pizzeria', 'sushi', 'noodles', 'ramen', 'steakhouse', 'grill', 'eatery', 'dining'],
-    description: 'Sit-down meals at restaurants, bistros, or eateries where you order at a table. Includes both casual dining and fine dining. Does not include fast food, takeaway, or coffee shops.',
+  'Coffee & Cafés': {
+    keywords: ['starbucks', 'costa', 'espresso', 'latte', 'cappuccino', 'americano', 'coffee shop', 'café', 'koffie', 'dutch bros', 'peet', 'tim hortons', 'caffè nero', 'bubble tea', 'smoothie bar', 'juice bar', 'thee', 'flat white'],
+    description: 'Coffee shops, espresso bars, tea houses, bubble tea, café chains (Starbucks, Costa, Tim Hortons, Dutch Bros), juice bars, smoothie shops, bakery-cafés where the primary spend is a drink.',
   },
-  'groceries': {
-    keywords: ['lidl', 'aldi', 'tesco', 'sainsbury', 'waitrose', 'asda', 'morrisons', 'whole foods', 'trader joe', 'kroger', 'supermarket', 'grocery', 'food shop'],
-    description: 'Supermarket or grocery store purchases — buying raw ingredients, household food staples, or packaged goods to cook or consume at home.',
+  'Groceries': {
+    keywords: ['albert heijn', 'aldi', 'jumbo', 'lidl', 'whole foods', 'trader joe', 'kroger', 'supermarket', 'grocery', 'boodschappen', 'picnic', 'hellofresh', 'gorillas', 'getir', 'spar', 'sainsbury', 'tesco', 'waitrose', 'asda', 'morrisons', 'market'],
+    description: 'Supermarkets, hypermarkets, wholesale food clubs, farmers markets, online grocery delivery (Picnic, HelloFresh, Gorillas, Getir), butchers, fishmongers, bakeries as a food shop.',
   },
-  'takeaway': {
-    keywords: ['deliveroo', 'just eat', 'uber eats', 'doordash', 'mcdonalds', 'kfc', 'burger king', 'dominos', 'pizza hut', 'subway', 'nandos', 'five guys', 'chipotle', 'takeaway'],
-    description: 'Food ordered for delivery or collected to eat at home or on the go — includes fast food chains, food delivery apps, and any quick-service restaurant.',
+  'Alcohol & Bars': {
+    keywords: ['bar', 'pub', 'kroeg', 'nightclub', 'gall & gall', 'wine shop', 'brewery', 'cocktail bar', 'bottle shop', 'wetherspoons', 'heineken', 'off-licence', 'liquor store', 'café kroeg'],
+    description: 'Bars, pubs, nightclubs, bottle shops, wine shops, craft beer stores. Drinks at a venue that is clearly a bar or club. Does not include wine bought at a supermarket.',
   },
-  'alcohol': {
-    keywords: ['pub', 'bar', 'brewery', 'wine', 'beer', 'spirits', 'wetherspoons', 'heineken', 'off-licence', 'liquor'],
-    description: 'Drinks at bars, pubs, or clubs, and alcohol purchased from shops or off-licences.',
+  'Transport': {
+    keywords: ['gvb', 'ret', 'htm', 'ns kaartje', 'bus ticket', 'metro', 'tram', 'bolt taxi', 'lime scooter', 'tier', 'parking', 'benzine', 'ev charging', 'toll', 'rideshare', 'oyster', 'tfl', 'translink', 'contactless transit'],
+    description: 'Public transit (bus, metro, tram, train), taxis, rideshare (Uber, Bolt, Lyft), bike/scooter rentals, ferry tickets, toll roads, parking, fuel/petrol/gas stations, EV charging. Not flights or long-distance trains.',
   },
-  'snacks': {
-    keywords: ['snack', 'crisps', 'chocolate', 'newsagent', 'corner shop', 'vending'],
-    description: 'Small food purchases like snacks, confectionery, or drinks from corner shops, newsagents, or vending machines. Not a full meal.',
+  'Travel': {
+    keywords: ['klm', 'ryanair', 'easyjet', 'booking.com', 'airbnb', 'hotel', 'flight', 'eurostar', 'car rental', 'hertz', 'avis', 'hostel', 'luggage', 'travel insurance', 'vliegticket', 'thalys', 'cruise', 'resort', 'vacation', 'holiday inn', 'marriott', 'hilton'],
+    description: 'Flights, hotels, hostels, Airbnb, vacation rentals, long-distance trains (Eurostar, Thalys), car rentals, travel insurance, travel agencies, cruises, airport lounges, luggage fees, visa fees.',
   },
-  'streaming': {
-    keywords: ['netflix', 'spotify', 'apple tv', 'disney+', 'hbo', 'amazon prime', 'youtube premium', 'hulu', 'paramount+', 'crunchyroll', 'peacock', 'dazn', 'apple music'],
-    description: 'Monthly subscriptions to streaming services for video, music, or podcasts — such as Netflix, Spotify, Disney+, or Apple TV+.',
+  'Health & Medical': {
+    keywords: ['huisarts', 'dokter', 'dentist', 'tandarts', 'apotheek', 'pharmacy', 'physio', 'optician', 'zorgverzekering', 'vitamins', 'supplement', 'hospital', 'ziekenhuis', 'therapist', 'prescription', 'blood test', 'specsavers', 'vision express', 'health insurance', 'gp', 'nhs', 'clinic'],
+    description: 'Doctor visits, dentist, specialist, physiotherapy, pharmacy, prescriptions, optician, hospital bills, health insurance premiums, mental health therapy, blood tests, medical equipment, vitamins and supplements.',
   },
-  'gaming': {
-    keywords: ['steam', 'playstation', 'xbox', 'nintendo', 'epic games', 'psn', 'xbox game pass', 'ea play', 'ubisoft', 'humble bundle', 'twitch'],
-    description: 'Video game purchases, gaming subscriptions, in-game purchases, or gaming platform fees.',
+  'Fitness & Sports': {
+    keywords: ['gym', 'basic-fit', 'yoga', 'crossfit', 'pilates', 'personal trainer', 'sports club', 'swimming', 'peloton', 'strava', 'marathon', 'fitness app', 'puregym', 'anytime fitness', 'planet fitness', 'les mills', 'equinox', 'boxing', 'cycling club'],
+    description: 'Gym memberships, personal trainers, yoga studios, pilates, swimming pools, sports clubs, CrossFit, martial arts, cycling clubs, running events, sports equipment, fitness apps (Strava, MyFitnessPal, Peloton).',
   },
-  'music': {
-    keywords: ['spotify', 'apple music', 'tidal', 'deezer', 'soundcloud', 'bandcamp'],
-    description: 'Music streaming subscriptions or music purchases. Separate from general streaming if the purchase is music-specific.',
+  'Personal Care & Beauty': {
+    keywords: ['kapper', 'haircut', 'nail salon', 'spa', 'massage', 'barber', 'beauty salon', 'skincare', 'cosmetics', 'waxing', 'parfum', 'sephora', 'lush', 'tanning salon', 'eyebrow', 'threading', 'salon'],
+    description: 'Haircut, hair salon, barbershop, nail salon, beauty treatments, spa, massage, skincare products, cosmetics, perfume, tanning salon, waxing, eyebrow threading.',
   },
-  'books': {
-    keywords: ['amazon books', 'kindle', 'audible', 'bookshop', 'waterstones', 'barnes', 'book depository', 'scribd'],
-    description: 'Book purchases (physical or digital), ebook subscriptions like Kindle Unlimited, or audiobook services like Audible.',
+  'Entertainment': {
+    keywords: ['cinema', 'pathé', 'concert', 'theater', 'festival', 'ticketmaster', 'escape room', 'bowling', 'comedy show', 'pretpark', 'karaoke', 'cineworld', 'odeon', 'vue', 'imax', 'eventbrite', 'amusement park', 'mini golf', 'arcade'],
+    description: 'Movies, cinema, concerts, live music, theater, events, amusement parks, escape rooms, bowling, arcade, comedy shows, festivals, sporting events (spectator), karaoke, mini golf.',
   },
-  'cinema': {
-    keywords: ['cinema', 'cineworld', 'odeon', 'vue', 'picturehouse', 'imax', 'fandango', 'movietickets', 'regal'],
-    description: 'Cinema tickets, movie theatre purchases (including food at the cinema), or movie rental/purchase on platforms like Apple TV or Google Play.',
+  'Streaming & Subscriptions': {
+    keywords: ['netflix', 'spotify', 'disney+', 'hbo max', 'apple tv', 'amazon prime video', 'apple music', 'tidal', 'deezer', 'icloud', 'google one', 'dropbox', 'youtube premium', 'hulu', 'crunchyroll', 'paramount+', 'peacock', 'nyt subscription', 'adobe creative cloud'],
+    description: 'Video streaming (Netflix, Disney+, HBO Max), music streaming (Spotify, Apple Music, Tidal), podcast apps, cloud storage (iCloud, Google One, Dropbox), news subscriptions, software licenses for personal use.',
   },
-  'tickets': {
-    keywords: ['ticketmaster', 'eventbrite', 'skiddle', 'see tickets', 'dice', 'resident advisor', 'festival', 'concert', 'gig', 'event', 'theatre', 'opera'],
-    description: 'Tickets for live events — concerts, festivals, theatre, sports games, comedy shows, or any other ticketed event.',
+  'Gaming': {
+    keywords: ['steam', 'playstation store', 'xbox', 'nintendo', 'in-app purchase', 'game pass', 'ps plus', 'ea play', 'twitch sub', 'epic games', 'ubisoft', 'psn', 'humble bundle', 'gaming gear'],
+    description: 'Video game purchases (Steam, PlayStation Store, Xbox, Nintendo), gaming subscriptions (PlayStation Plus, Xbox Game Pass, EA Play), in-game purchases, gaming hardware, gaming accessories.',
   },
-  'transport': {
-    keywords: ['oyster', 'tfl', 'bus', 'tube', 'metro', 'tram', 'train', 'national rail', 'gwr', 'avanti', 'thameslink', 'contactless transit', 'translink'],
-    description: 'Public transport fares — buses, trains, underground, trams, or any mass transit system. Includes travel cards and monthly passes.',
+  'Books & Reading': {
+    keywords: ['audible', 'kindle', 'bookstore', 'boekhandel', 'ebook', 'magazine', 'audiobook', 'waterstones', 'barnes', 'book depository', 'scribd', 'library'],
+    description: 'Bookstores, ebooks, Kindle purchases, audiobooks (Audible), magazine subscriptions, newspaper subscriptions, library fees.',
   },
-  'taxi': {
-    keywords: ['uber', 'bolt', 'lyft', 'free now', 'addison lee', 'black cab', 'taxi', 'rideshare', 'ola', 'grab'],
-    description: 'Taxi journeys or rideshare app rides — Uber, Bolt, Lyft, or local taxi services.',
+  'Housing & Rent': {
+    keywords: ['huur', 'rent', 'hypotheek', 'mortgage', 'landlord', 'verhuurder', 'storage unit', 'hoa', 'property tax', 'moving company', 'tenancy'],
+    description: 'Monthly rent, mortgage payments, HOA fees, property tax, real estate agent fees, storage unit rental, moving services.',
   },
-  'fuel': {
-    keywords: ['shell', 'bp', 'esso', 'texaco', 'total', 'petrol', 'diesel', 'fuel', 'gas station'],
-    description: 'Petrol or diesel purchased at a fuel station for a car or vehicle.',
+  'Utilities': {
+    keywords: ['vattenfall', 'nuon', 'water bill', 'internet', 'kpn', 't-mobile', 'ziggo', 'electricity', 'gas bill', 'gemeentebelasting', 'cable', 'telefoon', 'broadband', 'british gas', 'eon', 'octopus energy', 'edf', 'wifi', 'phone bill', 'mobile contract'],
+    description: 'Electricity, gas, water, internet, home phone, mobile phone plan, cable TV, municipal taxes (gemeentebelasting), waste collection fees, sewage.',
   },
-  'parking': {
-    keywords: ['parking', 'ncp', 'q-park', 'ringo', 'justpark', 'parkopedia', 'car park', 'pay & display'],
-    description: 'Car parking fees, parking apps, or pay-and-display charges.',
+  'Home Maintenance & Repairs': {
+    keywords: ['plumber', 'electrician', 'handyman', 'loodgieter', 'cleaning service', 'schoonmaak', 'painter', 'renovation', 'garden service', 'tools', 'pest control', 'hvac', 'locksmith', 'screwfix', 'b&q'],
+    description: 'Plumber, electrician, handyman, cleaning services, HVAC repair, painting, renovation costs, tools for home repair, garden maintenance, pest control.',
   },
-  'car-insurance': {
-    keywords: ['car insurance', 'auto insurance', 'direct line', 'admiral', 'aviva', 'comparethemarket', 'confused.com', 'vehicle insurance'],
-    description: 'Car or vehicle insurance premiums — monthly or annual.',
+  'Pets': {
+    keywords: ['vet', 'dierenarts', 'dog food', 'cat food', 'pet shop', 'grooming', 'huisdierenshop', 'pet supplies', 'boarding', 'doggy daycare', 'pets at home', 'petplan'],
+    description: 'Pet food, vet bills, pet insurance, grooming, pet supplies, pet toys, boarding, doggy daycare.',
   },
-  'flights': {
-    keywords: ['ryanair', 'easyjet', 'british airways', 'lufthansa', 'emirates', 'american airlines', 'delta', 'expedia flights', 'skyscanner', 'kayak', 'flight', 'airline'],
-    description: 'Flight ticket purchases for any airline or booking platform.',
+  'Childcare & Kids': {
+    keywords: ['kinderopvang', 'daycare', 'babysitter', 'school fees', 'kids activity', 'speelgoed', 'nanny', 'kindergarten', 'baby supplies'],
+    description: 'Daycare, babysitter, school fees for children, kids activities, child allowance payments, toys and children clothing.',
   },
-  'medical': {
-    keywords: ['gp', 'doctor', 'nhs', 'hospital', 'consultant', 'dental', 'dentist', 'optician', 'vision express', 'specsavers', 'clinic', 'physiotherapy', 'physio'],
-    description: 'Medical appointments, GP visits, dentist, optician, physiotherapy, or any healthcare consultation fee.',
+  'Shopping': {
+    keywords: ['zalando', 'zara', 'h&m', 'amazon', 'bol.com', 'ikea', 'mediamarkt', 'coolblue', 'clothing', 'shoes', 'electronics', 'online shop', 'primark', 'uniqlo', 'asos', 'ebay', 'etsy', 'aliexpress'],
+    description: 'Clothing, shoes, accessories, electronics, furniture, homeware, online retail (Amazon, Bol.com, Zalando, H&M, Zara, IKEA), department stores, gifts, toys, books bought casually, sports gear.',
   },
-  'pharmacy': {
-    keywords: ['boots', 'superdrug', 'pharmacy', 'lloyds pharmacy', 'chemist', 'prescription', 'medicine', 'medication', 'vitamins', 'supplements'],
-    description: 'Prescription medication, over-the-counter medicine, vitamins, or supplements purchased at a pharmacy or chemist.',
+  'Gifts & Occasions': {
+    keywords: ['gift', 'cadeau', 'birthday present', 'gift card', 'flowers for someone', 'wedding gift', 'celebration dinner', 'interflora', 'moonpig', 'funky pigeon'],
+    description: 'Birthday gifts, wedding gifts, holiday gifts, gift cards purchased, flowers sent as a gift, celebration dinners paid for others.',
   },
-  'gym': {
-    keywords: ['gym', 'puregym', 'anytime fitness', 'planet fitness', 'crossfit', 'pilates', 'yoga', 'les mills', 'equinox', 'fitness', 'membership'],
-    description: 'Gym memberships, fitness class subscriptions, or personal training sessions. Includes all paid physical fitness services.',
+  'Charity & Donations': {
+    keywords: ['donation', 'donatie', 'charity', 'ngo', 'gofundme', 'fundraiser', 'church', 'crowdfunding', 'oxfam', 'red cross', 'sponsoring'],
+    description: 'Charitable donations, fundraisers, NGO contributions, church donations, crowdfunding (GoFundMe), sponsoring someone.',
   },
-  'sports': {
-    keywords: ['nike', 'adidas', 'sports direct', 'decathlon', '5-a-side', 'tennis court', 'swimming pool', 'climbing wall', 'golf', 'cycling club'],
-    description: 'Sports activity fees, sports equipment, or participation in organised sports. Does not include gym memberships (see Gym).',
+  'Insurance': {
+    keywords: ['centraal beheer', 'car insurance', 'home insurance', 'anwb', 'verzekering', 'liability', 'travel insurance policy', 'pet insurance', 'contents insurance', 'life insurance', 'bupa', 'axa', 'aviva', 'zurich'],
+    description: 'Car insurance, home insurance, contents insurance, travel insurance (standalone), life insurance, liability insurance, pet insurance. Note: health insurance goes to Health & Medical.',
   },
-  'mental-health': {
-    keywords: ['therapy', 'therapist', 'counselling', 'counselor', 'psychologist', 'psychiatrist', 'headspace', 'calm', 'betterhelp', 'bupa mental'],
-    description: 'Therapy sessions, counselling, or mental wellness app subscriptions like Headspace or Calm.',
+  'Banking & Finance': {
+    keywords: ['bank fee', 'atm fee', 'overdraft', 'currency exchange', 'credit card fee', 'loan interest', 'transaction fee', 'bank kosten', 'wire fee', 'kosten rekening'],
+    description: 'Bank account fees, ATM withdrawal fees, wire transfer fees, currency exchange fees, investment platform fees, credit card annual fees, loan interest payments.',
   },
-  'clothing': {
-    keywords: ['zara', 'h&m', 'uniqlo', 'asos', 'primark', 'next', 'topshop', 'reiss', 'cos', 'mango', 'gap', 'clothing', 'fashion', 'shoes', 'trainers', 'footwear'],
-    description: 'Clothing, footwear, accessories, or fashion items — from any store or online retailer.',
+  'Investments': {
+    keywords: ['degiro', 'etoro', 'crypto', 'bitcoin', 'etf', 'bux', 'brokerage', 'aandelen', 'investment', 'pension contribution', 'robinhood', 'vanguard', 'hargreaves lansdown', 'trading 212', 'freetrade', 'isa', 'coinbase', 'revolut invest'],
+    description: 'Brokerage deposits, stock purchases, ETF buys, crypto purchases, investment app deposits (DEGIRO, Robinhood, eToro, Bux), pension contributions.',
   },
-  'electronics': {
-    keywords: ['apple store', 'currys', 'argos', 'amazon electronics', 'samsung', 'best buy', 'john lewis tech', 'laptop', 'phone', 'headphones', 'monitor', 'keyboard'],
-    description: 'Electronic devices and gadgets — phones, laptops, headphones, tablets, cameras, or accessories.',
+  'Government & Taxes': {
+    keywords: ['belastingdienst', 'income tax', 'fine', 'boete', 'passport fee', 'government fee', 'btw', 'vat', 'council tax', 'hmrc', 'irs', 'municipality fine', 'belasting', 'digid'],
+    description: 'Tax payments (income tax, VAT, corporate tax), government fines, traffic fines, administrative fees, passport/ID renewal, government agency fees.',
   },
-  'beauty': {
-    keywords: ['sephora', 'boots beauty', 'lookfantastic', 'cult beauty', 'glossier', 'lush', 'the ordinary', 'nyx', 'salon', 'haircut', 'barber', 'nail'],
-    description: 'Beauty products, cosmetics, skincare, haircare, or personal grooming — including salon visits and barbers.',
+  'Education': {
+    keywords: ['coursera', 'udemy', 'masterclass', 'duolingo', 'babbel', 'tuition', 'cursus', 'school fee', 'textbook', 'exam fee', 'tutoring', 'studiefinanciering', 'linkedin learning', 'skillshare', 'codecademy', 'university', 'workshop', 'certification'],
+    description: 'Tuition fees, university fees, online courses (Coursera, Udemy, MasterClass), language learning apps (Duolingo, Babbel), textbooks, school supplies, tutoring, exam fees.',
   },
-  'pets': {
-    keywords: ['pets at home', 'pet shop', 'vet', 'veterinary', 'dog food', 'cat food', 'petplan', 'pet insurance', 'grooming'],
-    description: 'Pet food, veterinary fees, pet insurance, grooming services, or any other pet-related expense.',
+  'Office & Work Expenses': {
+    keywords: ['coworking', 'office supplies', 'kantoor', 'printer', 'stationery', 'business software', 'postage', 'work laptop', 'monitor', 'kantoorbenodigdheden', 'wework', 'regus', 'notion', 'figma', 'github', 'slack', 'zoom', 'aws', 'google workspace', 'microsoft 365', 'vercel', 'supabase'],
+    description: 'Office supplies, stationery, work equipment (monitor, keyboard), coworking space memberships, business software, printing costs, postage, work-related travel expensed.',
   },
-  'gifts': {
-    keywords: ['gift', 'flowers', 'interflora', 'moonpig', 'funky pigeon', 'prezzie', 'card factory', 'hallmark', 'not on the high street'],
-    description: 'Gifts purchased for others — including flowers, gift cards, greetings cards, or personalised presents.',
+  'Salary & Income': {
+    keywords: ['salaris', 'salary', 'loon', 'payroll', 'wage', 'paycheck', 'freelance payment received', 'invoice paid', 'employment income', 'direct deposit'],
+    description: 'Regular salary deposits, wages, payroll, freelance invoice payments received, consulting fees received, any income clearly labeled as salary or loon.',
   },
-  'hobbies': {
-    keywords: ['hobby', 'craft', 'art supplies', 'hobbycraft', 'model', 'photography', 'fishing', 'gardening', 'diy', 'b&q', 'screwfix', 'homebase'],
-    description: 'Purchases for personal hobbies, creative activities, DIY projects, or leisure pursuits.',
+  'Freelance & Side Income': {
+    keywords: ['fiverr', 'upwork', 'marktplaats', 'vinted', 'freelance project', 'side income', 'sold item', 'gig pay', 'client payment', 'stripe payout', 'ebay income'],
+    description: 'One-off freelance project payments, side hustle income, selling items online (Marktplaats, eBay, Vinted), gig economy payments (Fiverr, Upwork).',
   },
-  'travel': {
-    keywords: ['hotel', 'airbnb', 'booking.com', 'hostel', 'holiday inn', 'marriott', 'hilton', 'trivago', 'vrbo', 'resort', 'travel insurance'],
-    description: 'Travel accommodation — hotels, Airbnb, hostels, or holiday resorts. Also travel insurance. Flights are separate (see Flights).',
-  },
-  'software': {
-    keywords: ['notion', 'figma', 'github', 'aws', 'google workspace', 'microsoft 365', 'adobe', 'slack', 'zoom', 'dropbox', 'linear', 'vercel', 'netlify', 'heroku', 'supabase', 'anthropic', 'openai'],
-    description: 'Software subscriptions, SaaS tools, cloud services, or developer tools used for work or personal projects.',
-  },
-  'office': {
-    keywords: ['staples', 'ryman', 'office depot', 'viking', 'amazon business', 'printer', 'paper', 'stationery', 'ink cartridge'],
-    description: 'Office supplies — stationery, printer ink, paper, or any physical supplies for a home office or workplace.',
-  },
-  'freelance': {
-    keywords: ['contractor', 'client expense', 'business expense', 'invoice', 'work equipment', 'co-working', 'wework', 'regus'],
-    description: 'Business expenses incurred while freelancing — equipment, co-working spaces, tools, or client-related costs.',
-  },
-  'education': {
-    keywords: ['udemy', 'coursera', 'linkedin learning', 'masterclass', 'duolingo', 'tutoring', 'course', 'university', 'tuition', 'codecademy', 'skillshare'],
-    description: 'Educational courses, tuition fees, online learning platforms, or tutoring services.',
-  },
-  'taxes': {
-    keywords: ['hmrc', 'tax', 'irs', 'vat', 'council tax', 'self-assessment', 'accountant', 'bookkeeper', 'sage', 'quickbooks', 'xero'],
-    description: 'Tax payments, council tax, accountant fees, or accounting software subscriptions.',
-  },
-  'investments': {
-    keywords: ['vanguard', 'hargreaves lansdown', 'trading 212', 'freetrade', 'isa', 'stocks', 'shares', 'etf', 'crypto', 'coinbase', 'revolut invest'],
-    description: 'Investments — stocks, ETFs, ISAs, crypto, or any investment platform deposits.',
-  },
-  'loans': {
-    keywords: ['loan', 'mortgage', 'repayment', 'finance payment', 'klarna', 'clearpay', 'afterpay', 'credit payment'],
-    description: 'Loan repayments — mortgage, personal loans, car finance, or buy-now-pay-later instalments.',
-  },
-  'salary': {
-    keywords: ['salary', 'payroll', 'wages', 'paycheck', 'direct deposit', 'employer payment', 'monthly pay'],
-    description: 'Regular income paid by an employer — monthly salary, bi-weekly paycheck, or any recurring wage payment.',
-  },
-  'freelance-income': {
-    keywords: ['invoice paid', 'client payment', 'freelance payment', 'stripe payout', 'paypal income', 'bank transfer income'],
-    description: 'Income received for freelance or contract work — client payments, invoice settlements, or platform payouts.',
-  },
-  'refund': {
-    keywords: ['refund', 'cashback', 'return', 'credit', 'reimbursement', 'chargeback'],
-    description: 'Money returned to you — refunds from purchases, cashback rewards, or reimbursements from an employer or friend.',
-  },
-  'gift-received': {
-    keywords: ['gift received', 'birthday money', 'bank transfer from family', 'present'],
-    description: 'Money or gifts received from friends or family — birthday money, wedding gifts, or informal transfers.',
-  },
-  'other-income': {
-    keywords: ['dividends', 'rental income', 'side hustle', 'selling online', 'ebay income', 'vinted income', 'pension'],
-    description: 'Any other income that does not fit salary, freelance, refund, or gift — rental income, dividends, selling items online, or pension payments.',
-  },
-  'subscriptions': {
-    keywords: ['subscription', 'membership', 'monthly charge', 'annual renewal', 'recurring payment'],
-    description: 'General recurring subscription payments not covered by a more specific category — e.g. magazine subscriptions, app subscriptions, or club memberships.',
-  },
-  'rent': {
-    keywords: ['rent', 'landlord', 'tenancy', 'property payment', 'rental payment'],
-    description: 'Monthly rent payment to a landlord or letting agent.',
-  },
-  'utilities': {
-    keywords: ['british gas', 'eon', 'octopus energy', 'edf', 'scottish power', 'npower', 'electricity', 'gas bill', 'water bill', 'thames water', 'severn trent'],
-    description: 'Utility bills — gas, electricity, water, or heating.',
-  },
-  'internet': {
-    keywords: ['virgin media', 'bt broadband', 'sky broadband', 'plusnet', 'vodafone broadband', 'internet', 'broadband', 'wifi'],
-    description: 'Home broadband or internet service provider monthly bill.',
-  },
-  'phone': {
-    keywords: ['o2', 'ee', 'vodafone', 'three mobile', 'giffgaff', 'sky mobile', 'phone bill', 'sim', 'mobile contract'],
-    description: 'Mobile phone contract or SIM-only plan monthly bill.',
-  },
-  'insurance': {
-    keywords: ['home insurance', 'contents insurance', 'life insurance', 'travel insurance', 'health insurance', 'bupa', 'axa', 'aviva', 'zurich'],
-    description: 'Insurance premiums — home, contents, life, health, or travel insurance. Car insurance is separate (see Car Insurance).',
-  },
-  'home-supplies': {
-    keywords: ['ikea', 'amazon home', 'dunelm', 'john lewis home', 'wilko', 'home bargains', 'poundland', 'cleaning', 'bleach', 'laundry', 'candles'],
-    description: 'Household supplies — cleaning products, laundry essentials, home decor, or small domestic items.',
-  },
-  'other': {
-    keywords: [],
-    description: 'A transaction that does not fit any other category. Use as a last resort.',
+  'Rental Income': {
+    keywords: ['airbnb payout', 'huurinkomsten', 'rental income', 'room rent received', 'property income', 'airbnb host'],
+    description: 'Income from renting out property, Airbnb host payouts, room rental income, parking spot rental income.',
   },
 };

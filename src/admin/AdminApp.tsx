@@ -21,8 +21,8 @@ function isDefined(rule: RuleState): boolean {
 function initialRules(): RulesState {
   const result: RulesState = {}
   for (const cat of CATEGORIES) {
-    const existing = CATEGORY_RULES[cat.slug]
-    result[cat.slug] = {
+    const existing = CATEGORY_RULES[cat.name]
+    result[cat.name] = {
       keywords: existing?.keywords ? [...existing.keywords] : [],
       description: existing?.description ?? '',
     }
@@ -39,13 +39,14 @@ function buildExportTs(rules: RulesState): string {
     ``,
     `export type CategoryRulesMap = Record<string, CategoryRule>;`,
     ``,
+    `// Keys are the exact category names from the guide`,
     `export const CATEGORY_RULES: CategoryRulesMap = {`,
   ]
   for (const cat of CATEGORIES) {
-    const rule = rules[cat.slug]
+    const rule = rules[cat.name]
     const kws = JSON.stringify(rule.keywords)
     const desc = rule.description.replace(/`/g, "'")
-    lines.push(`  '${cat.slug}': {`)
+    lines.push(`  '${cat.name}': {`)
     lines.push(`    keywords: ${kws},`)
     lines.push(`    description: \`${desc}\`,`)
     lines.push(`  },`)
@@ -381,8 +382,8 @@ function CategoryEditor({
 // ─── Sidebar ──────────────────────────────────────────────────────────────────
 
 const GROUP_ORDER = [
-  'Food & Drink', 'Housing & Bills', 'Entertainment', 'Transport',
-  'Health & Fitness', 'Shopping & Lifestyle', 'Work & Finance', 'Income', 'Other',
+  'Food & Drink', 'Transport & Travel', 'Health & Wellness', 'Entertainment',
+  'Home & Life', 'Shopping', 'Finance', 'Work & Education', 'Income',
 ]
 
 function Sidebar({ rules, selectedSlug, search, onSearch, onSelect }: {
@@ -394,7 +395,8 @@ function Sidebar({ rules, selectedSlug, search, onSearch, onSelect }: {
 }) {
   const filtered = CATEGORIES.filter(cat =>
     cat.name.toLowerCase().includes(search.toLowerCase()) ||
-    cat.slug.toLowerCase().includes(search.toLowerCase())
+    cat.slug.toLowerCase().includes(search.toLowerCase()) ||
+    cat.group.toLowerCase().includes(search.toLowerCase())
   )
   const byGroup: Record<string, CategoryItem[]> = {}
   for (const cat of filtered) {
@@ -420,12 +422,12 @@ function Sidebar({ rules, selectedSlug, search, onSearch, onSelect }: {
               {group}
             </p>
             {byGroup[group].map(cat => {
-              const defined = isDefined(rules[cat.slug])
-              const active = cat.slug === selectedSlug
+              const defined = isDefined(rules[cat.name])
+              const active = cat.name === selectedSlug
               return (
                 <button
                   key={cat.slug}
-                  onClick={() => onSelect(cat.slug)}
+                  onClick={() => onSelect(cat.name)}
                   className={`w-full flex items-center gap-2 px-3 py-1.5 text-left text-xs transition-colors ${
                     active ? 'bg-zinc-700 text-white' : 'text-zinc-400 hover:bg-zinc-800 hover:text-zinc-200'
                   }`}
@@ -500,12 +502,12 @@ function Toast({ message }: { message: string }) {
 
 function Dashboard({ adminPassword, onLogout }: { adminPassword: string; onLogout: () => void }) {
   const [rules, setRules] = useState<RulesState>(initialRules)
-  const [selectedSlug, setSelectedSlug] = useState<string>(CATEGORIES[0].slug)
+  const [selectedSlug, setSelectedSlug] = useState<string>(CATEGORIES[0].name)
   const [search, setSearch] = useState('')
   const [isSaving, setIsSaving] = useState(false)
   const [toast, setToast] = useState<string | null>(null)
 
-  const definedCount = CATEGORIES.filter(cat => isDefined(rules[cat.slug])).length
+  const definedCount = CATEGORIES.filter(cat => isDefined(rules[cat.name])).length
   const progress = definedCount / CATEGORIES.length
 
   function showToast(msg: string) {
@@ -529,7 +531,7 @@ function Dashboard({ adminPassword, onLogout }: { adminPassword: string; onLogou
     }
   }
 
-  const selectedCategory = CATEGORIES.find(c => c.slug === selectedSlug)!
+  const selectedCategory = CATEGORIES.find(c => c.name === selectedSlug)!
   const selectedRule = rules[selectedSlug]
 
   return (
@@ -558,9 +560,9 @@ function Dashboard({ adminPassword, onLogout }: { adminPassword: string; onLogou
             <CategoryEditor
               category={selectedCategory}
               rule={selectedRule}
-              onChange={rule => setRules(prev => ({ ...prev, [selectedSlug]: rule }))}
+              onChange={rule => setRules(prev => ({ ...prev, [selectedCategory.name]: rule }))}
               onSave={saveToFile}
-              onClear={() => setRules(prev => ({ ...prev, [selectedSlug]: { keywords: [], description: '' } }))}
+              onClear={() => setRules(prev => ({ ...prev, [selectedCategory.name]: { keywords: [], description: '' } }))}
               isSaving={isSaving}
               onToast={showToast}
             />

@@ -2,68 +2,49 @@ import { createContext, useContext, useState, useRef, useCallback, type ReactNod
 import type { Transaction, Budget, PeriodSummary, CategorySummary, HeaderState, Insight } from '../types'
 import { useInsights } from '../hooks/useInsights'
 
-// ─── Category colors (50-category system) ─────────────────────────────────────
+// ─── Category colors (30-category guide system) ───────────────────────────────
 export const CATEGORY_COLORS: Record<string, string> = {
   // Food & Drink
-  'Restaurants':        '#FF6B6B',
-  'Coffee & Cafes':     '#D7816A',
-  'Groceries':          '#96CEB4',
-  'Bars & Nightlife':   '#C56BFF',
-  'Fast Food':          '#FF8C42',
-  'Bakery & Sweets':    '#F7B2BD',
-  'Delivery':           '#FF6B6B',
-  'Work Meals':         '#E07A5F',
-  // Transport
-  'Ride-hailing':       '#4ECDC4',
-  'Fuel':               '#45B7D1',
-  'Parking':            '#5BC0EB',
-  'Public Transit':     '#4ECDC4',
-  'Flights':            '#0077B6',
-  'Car Maintenance':    '#4895EF',
-  // Shopping
-  'Clothing':           '#FECA57',
-  'Electronics':        '#3A86FF',
-  'Home & Furniture':   '#8338EC',
-  'Books & Stationery': '#FB8500',
-  'Gifts':              '#FF006E',
-  'Online Shopping':    '#FECA57',
-  'Beauty & Personal':  '#F72585',
-  // Health & Fitness
-  'Gym & Sports':       '#45B7D1',
-  'Medical':            '#54A0FF',
-  'Pharmacy':           '#48CAE4',
-  'Mental Health':      '#7400B8',
-  'Wellness':           '#80B918',
+  'Restaurants & Dining':       '#FF6B6B',
+  'Coffee & Cafés':             '#D7816A',
+  'Groceries':                  '#96CEB4',
+  'Alcohol & Bars':             '#C56BFF',
+  // Transport & Travel
+  'Transport':                  '#4ECDC4',
+  'Travel':                     '#0077B6',
+  // Health & Wellness
+  'Health & Medical':           '#54A0FF',
+  'Fitness & Sports':           '#45B7D1',
+  'Personal Care & Beauty':     '#F72585',
+  // Entertainment
+  'Entertainment':              '#F4A261',
+  'Streaming & Subscriptions':  '#FF9FF3',
+  'Gaming':                     '#6C63FF',
+  'Books & Reading':            '#FB8500',
   // Home & Life
-  'Rent':               '#5F27CD',
-  'Utilities':          '#00D2D3',
-  'Home Services':      '#6A4C93',
-  'Pets':               '#52B788',
-  'Childcare':          '#74C69D',
-  'Insurance':          '#2D6A4F',
-  // Entertainment & Lifestyle
-  'Streaming':          '#FF9FF3',
-  'Gaming':             '#6C63FF',
-  'Events & Tickets':   '#F4A261',
-  'Hobbies':            '#E9C46A',
-  'Travel & Hotels':    '#264653',
-  'Sports & Outdoors':  '#2A9D8F',
-  // Work & Finance
-  'Software & Tools':   '#457B9D',
-  'Office Supplies':    '#A8DADC',
-  'Freelance Expense':  '#1D3557',
-  'Education':          '#E63946',
-  'Taxes & Fees':       '#6B705C',
-  'Investments':        '#B7B7A4',
-  'Loan Payments':      '#A5A58D',
+  'Housing & Rent':             '#5F27CD',
+  'Utilities':                  '#00D2D3',
+  'Home Maintenance & Repairs': '#6A4C93',
+  'Pets':                       '#52B788',
+  'Childcare & Kids':           '#74C69D',
+  // Shopping
+  'Shopping':                   '#FECA57',
+  'Gifts & Occasions':          '#FF006E',
+  'Charity & Donations':        '#E9C46A',
+  // Finance
+  'Insurance':                  '#2D6A4F',
+  'Banking & Finance':          '#457B9D',
+  'Investments':                '#B7B7A4',
+  'Government & Taxes':         '#6B705C',
+  // Work & Education
+  'Education':                  '#E63946',
+  'Office & Work Expenses':     '#1D3557',
   // Income
-  'Salary':             '#2E7D32',
-  'Freelance Income':   '#388E3C',
-  'Refund':             '#43A047',
-  'Gift Received':      '#4CAF50',
-  'Other Income':       '#66BB6A',
+  'Salary & Income':            '#2E7D32',
+  'Freelance & Side Income':    '#388E3C',
+  'Rental Income':              '#43A047',
   // Legacy fallback
-  'Other':              '#B2BEC3',
+  'Other':                      '#B2BEC3',
 }
 
 // ─── Calculation helpers (Part 10) ────────────────────────────────────────────
@@ -250,27 +231,27 @@ const ExpenseContext = createContext<ExpenseContextType | null>(null)
 
 const SEED: Transaction[] = [
   {
-    id: '1', name: 'Box subscription', amount: 50, type: 'expense', category: 'Gym & Sports',
+    id: '1', name: 'Box subscription', amount: 50, type: 'expense', category: 'Fitness & Sports',
     frequency: 'monthly', date: new Date(Date.now() - 86400000), notes: '', emoji: '🥊', createdAt: new Date(),
   },
   {
-    id: '2', name: 'Sam americano', amount: 50, type: 'expense', category: 'Coffee & Cafes',
+    id: '2', name: 'Sam americano', amount: 50, type: 'expense', category: 'Coffee & Cafés',
     frequency: 'none', date: new Date(Date.now() - 86400000), notes: '', emoji: '🧋', createdAt: new Date(),
   },
   {
-    id: '3', name: 'January salary', amount: 4000, type: 'income', category: 'Salary',
+    id: '3', name: 'January salary', amount: 4000, type: 'income', category: 'Salary & Income',
     frequency: 'monthly', date: new Date(Date.now() - 86400000), notes: '', emoji: '💵', createdAt: new Date(),
   },
   {
-    id: '4', name: 'Box subscription', amount: 50, type: 'expense', category: 'Gym & Sports',
+    id: '4', name: 'Box subscription', amount: 50, type: 'expense', category: 'Fitness & Sports',
     frequency: 'monthly', date: new Date(), notes: '', emoji: '🥊', createdAt: new Date(),
   },
   {
-    id: '5', name: 'Sam americano', amount: 50, type: 'expense', category: 'Coffee & Cafes',
+    id: '5', name: 'Sam americano', amount: 50, type: 'expense', category: 'Coffee & Cafés',
     frequency: 'none', date: new Date(), notes: '', emoji: '🧋', createdAt: new Date(),
   },
   {
-    id: '6', name: 'January salary', amount: 4000, type: 'income', category: 'Salary',
+    id: '6', name: 'January salary', amount: 4000, type: 'income', category: 'Salary & Income',
     frequency: 'monthly', date: new Date(), notes: '', emoji: '💵', createdAt: new Date(),
   },
 ]

@@ -1,91 +1,73 @@
-// ─── 50 built-in categories, 8 groups ─────────────────────────────────────────
+// ─── 30 canonical categories per cent-category-guide ────────────────────────
 
 export type CategoryGroup =
   | 'Food & Drink'
-  | 'Transport'
-  | 'Shopping'
-  | 'Health & Fitness'
+  | 'Transport & Travel'
+  | 'Health & Wellness'
+  | 'Entertainment'
   | 'Home & Life'
-  | 'Entertainment & Lifestyle'
-  | 'Work & Finance'
+  | 'Shopping'
+  | 'Finance'
+  | 'Work & Education'
   | 'Income'
 
 export interface CategoryItem {
   name: string
   group: CategoryGroup
-  // CDN slug that maps to existing Vercel Blob images
   cdnSlug: string
 }
 
 export const CATEGORIES: CategoryItem[] = [
-  // ── Food & Drink ────────────────────────────────────────────────────────────
-  { name: 'Restaurants',       group: 'Food & Drink',              cdnSlug: 'restaurant'   },
-  { name: 'Coffee & Cafes',    group: 'Food & Drink',              cdnSlug: 'coffee'        },
-  { name: 'Groceries',         group: 'Food & Drink',              cdnSlug: 'supermarket'   },
-  { name: 'Bars & Nightlife',  group: 'Food & Drink',              cdnSlug: 'cocktail'      },
-  { name: 'Fast Food',         group: 'Food & Drink',              cdnSlug: 'burger'        },
-  { name: 'Bakery & Sweets',   group: 'Food & Drink',              cdnSlug: 'pizza'         },
-  { name: 'Delivery',          group: 'Food & Drink',              cdnSlug: 'shopping-bag'  },
-  { name: 'Work Meals',        group: 'Food & Drink',              cdnSlug: 'restaurant'    },
-  // ── Transport ───────────────────────────────────────────────────────────────
-  { name: 'Ride-hailing',      group: 'Transport',                 cdnSlug: 'taxi'          },
-  { name: 'Fuel',              group: 'Transport',                 cdnSlug: 'gas-station'   },
-  { name: 'Parking',           group: 'Transport',                 cdnSlug: 'car'           },
-  { name: 'Public Transit',    group: 'Transport',                 cdnSlug: 'bus'           },
-  { name: 'Flights',           group: 'Transport',                 cdnSlug: 'airplane'      },
-  { name: 'Car Maintenance',   group: 'Transport',                 cdnSlug: 'car'           },
-  // ── Shopping ────────────────────────────────────────────────────────────────
-  { name: 'Clothing',          group: 'Shopping',                  cdnSlug: 'sneakers'      },
-  { name: 'Electronics',       group: 'Shopping',                  cdnSlug: 'laptop'        },
-  { name: 'Home & Furniture',  group: 'Shopping',                  cdnSlug: 'house'         },
-  { name: 'Books & Stationery',group: 'Shopping',                  cdnSlug: 'book'          },
-  { name: 'Gifts',             group: 'Shopping',                  cdnSlug: 'gift'          },
-  { name: 'Online Shopping',   group: 'Shopping',                  cdnSlug: 'shopping-bag'  },
-  { name: 'Beauty & Personal', group: 'Shopping',                  cdnSlug: 'sunglasses'    },
-  // ── Health & Fitness ────────────────────────────────────────────────────────
-  { name: 'Gym & Sports',      group: 'Health & Fitness',          cdnSlug: 'dumbbell'      },
-  { name: 'Medical',           group: 'Health & Fitness',          cdnSlug: 'ambulance'     },
-  { name: 'Pharmacy',          group: 'Health & Fitness',          cdnSlug: 'ambulance'     },
-  { name: 'Mental Health',     group: 'Health & Fitness',          cdnSlug: 'yoga'          },
-  { name: 'Wellness',          group: 'Health & Fitness',          cdnSlug: 'yoga'          },
-  // ── Home & Life ─────────────────────────────────────────────────────────────
-  { name: 'Rent',              group: 'Home & Life',               cdnSlug: 'house'         },
-  { name: 'Utilities',         group: 'Home & Life',               cdnSlug: 'lightning'     },
-  { name: 'Home Services',     group: 'Home & Life',               cdnSlug: 'house'         },
-  { name: 'Pets',              group: 'Home & Life',               cdnSlug: 'dog'           },
-  { name: 'Childcare',         group: 'Home & Life',               cdnSlug: 'credit-card'   },
-  { name: 'Insurance',         group: 'Home & Life',               cdnSlug: 'insurance'     },
-  // ── Entertainment & Lifestyle ────────────────────────────────────────────────
-  { name: 'Streaming',         group: 'Entertainment & Lifestyle', cdnSlug: 'subscription'  },
-  { name: 'Gaming',            group: 'Entertainment & Lifestyle', cdnSlug: 'movie'         },
-  { name: 'Events & Tickets',  group: 'Entertainment & Lifestyle', cdnSlug: 'movie'         },
-  { name: 'Hobbies',           group: 'Entertainment & Lifestyle', cdnSlug: 'camera'        },
-  { name: 'Travel & Hotels',   group: 'Entertainment & Lifestyle', cdnSlug: 'suitcase'      },
-  { name: 'Sports & Outdoors', group: 'Entertainment & Lifestyle', cdnSlug: 'running'       },
-  // ── Work & Finance ───────────────────────────────────────────────────────────
-  { name: 'Software & Tools',  group: 'Work & Finance',            cdnSlug: 'laptop'        },
-  { name: 'Office Supplies',   group: 'Work & Finance',            cdnSlug: 'book'          },
-  { name: 'Freelance Expense', group: 'Work & Finance',            cdnSlug: 'wallet'        },
-  { name: 'Education',         group: 'Work & Finance',            cdnSlug: 'book'          },
-  { name: 'Taxes & Fees',      group: 'Work & Finance',            cdnSlug: 'receipt'       },
-  { name: 'Investments',       group: 'Work & Finance',            cdnSlug: 'bank'          },
-  { name: 'Loan Payments',     group: 'Work & Finance',            cdnSlug: 'bank'          },
+  // ── Food & Drink ─────────────────────────────────────────────────────────────
+  { name: 'Restaurants & Dining',     group: 'Food & Drink',       cdnSlug: 'restaurant'   },
+  { name: 'Coffee & Cafés',           group: 'Food & Drink',       cdnSlug: 'coffee'        },
+  { name: 'Groceries',                group: 'Food & Drink',       cdnSlug: 'supermarket'   },
+  { name: 'Alcohol & Bars',           group: 'Food & Drink',       cdnSlug: 'cocktail'      },
+  // ── Transport & Travel ───────────────────────────────────────────────────────
+  { name: 'Transport',                group: 'Transport & Travel', cdnSlug: 'bus'           },
+  { name: 'Travel',                   group: 'Transport & Travel', cdnSlug: 'suitcase'      },
+  // ── Health & Wellness ────────────────────────────────────────────────────────
+  { name: 'Health & Medical',         group: 'Health & Wellness',  cdnSlug: 'ambulance'     },
+  { name: 'Fitness & Sports',         group: 'Health & Wellness',  cdnSlug: 'dumbbell'      },
+  { name: 'Personal Care & Beauty',   group: 'Health & Wellness',  cdnSlug: 'sunglasses'    },
+  // ── Entertainment ────────────────────────────────────────────────────────────
+  { name: 'Entertainment',            group: 'Entertainment',      cdnSlug: 'movie'         },
+  { name: 'Streaming & Subscriptions',group: 'Entertainment',      cdnSlug: 'subscription'  },
+  { name: 'Gaming',                   group: 'Entertainment',      cdnSlug: 'movie'         },
+  { name: 'Books & Reading',          group: 'Entertainment',      cdnSlug: 'book'          },
+  // ── Home & Life ──────────────────────────────────────────────────────────────
+  { name: 'Housing & Rent',           group: 'Home & Life',        cdnSlug: 'house'         },
+  { name: 'Utilities',                group: 'Home & Life',        cdnSlug: 'lightning'     },
+  { name: 'Home Maintenance & Repairs',group: 'Home & Life',       cdnSlug: 'house'         },
+  { name: 'Pets',                     group: 'Home & Life',        cdnSlug: 'dog'           },
+  { name: 'Childcare & Kids',         group: 'Home & Life',        cdnSlug: 'credit-card'   },
+  // ── Shopping ─────────────────────────────────────────────────────────────────
+  { name: 'Shopping',                 group: 'Shopping',           cdnSlug: 'shopping-bag'  },
+  { name: 'Gifts & Occasions',        group: 'Shopping',           cdnSlug: 'gift'          },
+  { name: 'Charity & Donations',      group: 'Shopping',           cdnSlug: 'gift'          },
+  // ── Finance ──────────────────────────────────────────────────────────────────
+  { name: 'Insurance',                group: 'Finance',            cdnSlug: 'insurance'     },
+  { name: 'Banking & Finance',        group: 'Finance',            cdnSlug: 'bank'          },
+  { name: 'Investments',              group: 'Finance',            cdnSlug: 'bank'          },
+  { name: 'Government & Taxes',       group: 'Finance',            cdnSlug: 'receipt'       },
+  // ── Work & Education ─────────────────────────────────────────────────────────
+  { name: 'Education',                group: 'Work & Education',   cdnSlug: 'book'          },
+  { name: 'Office & Work Expenses',   group: 'Work & Education',   cdnSlug: 'laptop'        },
   // ── Income ───────────────────────────────────────────────────────────────────
-  { name: 'Salary',            group: 'Income',                    cdnSlug: 'money'         },
-  { name: 'Freelance Income',  group: 'Income',                    cdnSlug: 'money'         },
-  { name: 'Refund',            group: 'Income',                    cdnSlug: 'credit-card'   },
-  { name: 'Gift Received',     group: 'Income',                    cdnSlug: 'gift'          },
-  { name: 'Other Income',      group: 'Income',                    cdnSlug: 'wallet'        },
+  { name: 'Salary & Income',          group: 'Income',             cdnSlug: 'money'         },
+  { name: 'Freelance & Side Income',  group: 'Income',             cdnSlug: 'money'         },
+  { name: 'Rental Income',            group: 'Income',             cdnSlug: 'house'         },
 ]
 
 export const CATEGORY_GROUP_ORDER: CategoryGroup[] = [
   'Food & Drink',
-  'Transport',
-  'Shopping',
-  'Health & Fitness',
+  'Transport & Travel',
+  'Health & Wellness',
+  'Entertainment',
   'Home & Life',
-  'Entertainment & Lifestyle',
-  'Work & Finance',
+  'Shopping',
+  'Finance',
+  'Work & Education',
   'Income',
 ]
 
