@@ -69,7 +69,7 @@ export default async function handler(req: VercelRequest, res: VercelResponse) {
 
     // Build a File object that Groq SDK accepts
     const ext = mimeType.includes('mp4') ? 'mp4' : mimeType.includes('ogg') ? 'ogg' : 'webm'
-    const file = new File([audioBuffer], `recording.${ext}`, { type: mimeType })
+    const file = new File([new Uint8Array(audioBuffer)], `recording.${ext}`, { type: mimeType })
 
     const transcription = await groq.audio.transcriptions.create({
       file,

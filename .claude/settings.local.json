@@ -39,7 +39,23 @@
       "Bash(sed -i '' 's|import { useExpense } from '\\\\''../../context/MockExpenseContext'\\\\''\\\\nimport { getHeaderState, formatHeaderNumber } from '\\\\''../../context/MockExpenseContext'\\\\''|import { useExpense } from '\\\\''../../context/ExpenseContext'\\\\''\\\\nimport { getHeaderState, formatHeaderNumber } from '\\\\''../../context/MockExpenseContext'\\\\''|g' src/components/layout/Header.tsx)",
       "mcp__f5d8ec91-93c2-45a5-9a3b-c02b41a453f3__get_deployment_build_logs",
       "Bash(git pull *)",
-      "Bash(git stash *)"
+      "Bash(git stash *)",
+      "Bash(supabase --version)",
+      "Bash(npx supabase *)",
+      "Bash(brew update *)",
+      "Bash(brew install *)",
+      "Bash(curl -L https://github.com/supabase/cli/releases/latest/download/supabase_darwin_arm64.tar.gz -o /tmp/supabase.tar.gz)",
+      "Bash(tar -xzf /tmp/supabase.tar.gz -C /tmp)",
+      "Bash(sudo mv *)",
+      "Bash(git commit *)",
+      "Bash(/usr/bin/git add *)",
+      "Bash(/usr/bin/git commit *)",
+      "Bash(/usr/bin/git push *)",
+      "Bash(git --version)",
+      "Bash(xcode-select --install)",
+      "Bash(softwareupdate --install-rosetta)",
+      "Bash(xcode-select -p)",
+      "Bash(node -e \"const icons = require\\('/Users/hesam/Code-Projects/Cent/node_modules/iconsax-react'\\); const names = Object.keys\\(icons\\).filter\\(k => k.toLowerCase\\(\\).includes\\('circle'\\) && k.toLowerCase\\(\\).includes\\('up'\\)\\); console.log\\(names\\)\")"
     ]
   }
 }

@@ -2,6 +2,7 @@ import { useState, useRef, useEffect } from 'react'
 import { useRecurringExpenses, type RecurringTransaction } from '../hooks/useRecurringExpenses'
 import { TransactionImage } from './ui/TransactionImage'
 import { formatAmount } from '../utils/formatCurrency'
+import { getNextDate } from '../utils/recurring'
 
 type FrequencyFilter = 'all' | 'monthly' | 'weekly' | 'yearly' | 'daily'
 
@@ -21,16 +22,8 @@ const FILTER_LABELS: { key: FrequencyFilter; label: string }[] = [
 
 const FREQ_ORDER: FrequencyFilter[] = ['monthly', 'weekly', 'daily', 'yearly']
 
-function getNextExpectedDate(frequency: string, lastLoggedAt: string): string {
-  const last = new Date(lastLoggedAt)
-  const next = new Date(last)
-
-  switch (frequency) {
-    case 'monthly': next.setMonth(next.getMonth() + 1); break
-    case 'weekly':  next.setDate(next.getDate() + 7); break
-    case 'daily':   next.setDate(next.getDate() + 1); break
-    case 'yearly':  next.setFullYear(next.getFullYear() + 1); break
-  }
+function getNextExpectedDate(item: RecurringTransaction): string {
+  const next = getNextDate(item.last_logged_at, item.recurring)
 
   const today = new Date()
   if (next < today) return 'Due now'
@@ -136,7 +129,7 @@ function RecurringRow({
   const [confirmDelete, setConfirmDelete] = useState(false)
   const [working, setWorking] = useState(false)
 
-  const nextDate = getNextExpectedDate(item.frequency, item.last_logged_at)
+  const nextDate = getNextExpectedDate(item)
   const isDue = nextDate === 'Due now' || nextDate === 'Due today'
 
   async function handleFreqChange(freq: string) {

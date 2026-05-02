@@ -1,13 +1,5 @@
 {
   "rewrites": [
-    {
-      "source": "/admin/(.*)",
-      "has": [{ "type": "host", "value": "admin.cent.app" }],
-      "destination": "/admin/$1"
-    },
-    {
-      "source": "/(.*)",
-      "destination": "/index.html"
-    }
+    { "source": "/api/(.*)", "destination": "/api/$1" }
   ]
 }

@@ -1,18 +1,4 @@
 import type { VercelRequest, VercelResponse } from '@vercel/node'
-import { CATEGORY_RULES } from '../src/data/categoryRules.js'
-
-type CategoryRule = { keywords: string[]; description: string }
-
-// Returns the full category name (guide-canonical) or null
-function matchByKeyword(transactionName: string): string | null {
-  const name = transactionName.toLowerCase()
-  for (const [categoryName, rule] of Object.entries(CATEGORY_RULES) as [string, CategoryRule][]) {
-    if (rule.keywords.some((kw: string) => name.includes(kw))) {
-      return categoryName
-    }
-  }
-  return null
-}
 
 const SYSTEM_PROMPT = `You are a financial expense parser for Cent, a minimal expense tracker.
 
@@ -113,21 +99,6 @@ export default async function handler(req: VercelRequest, res: VercelResponse) {
     return res.status(400).json({ error: 'Missing text' })
   }
 
-  // Fast path: keyword match skips Gemini entirely
-  const keywordMatch = matchByKeyword(text)
-  if (keywordMatch) {
-    return res.status(200).json({
-      name: null,
-      amount: null,
-      type: type ?? 'expense',
-      category: keywordMatch,
-      frequency: 'none',
-      tags: [],
-      confidence: { name: 0, amount: 0, category: 1.0, frequency: 0.99 },
-      source: 'keyword',
-    })
-  }
-
   const apiKey = process.env.GEMINI_API_KEY
   if (!apiKey) {
     return res.status(500).json({ error: 'GEMINI_API_KEY not configured' })
@@ -136,15 +107,8 @@ export default async function handler(req: VercelRequest, res: VercelResponse) {
   try {
     const url = `https://generativelanguage.googleapis.com/v1beta/models/${GEMINI_MODEL}:generateContent?key=${apiKey}`
 
-    const categoryContext = (Object.entries(CATEGORY_RULES) as [string, CategoryRule][])
-      .filter(([, rule]) => rule.description)
-      .map(([name, rule]) => `- ${name}: ${rule.description}`)
-      .join('\n')
-
-    const systemPromptWithContext = SYSTEM_PROMPT + `\n\nADDITIONAL CATEGORY CONTEXT:\n${categoryContext}`
-
     const body = {
-      system_instruction: { parts: [{ text: systemPromptWithContext }] },
+      system_instruction: { parts: [{ text: SYSTEM_PROMPT }] },
       contents: [{
         role: 'user',
         parts: [{ text: `User-selected type: "${type}". Parse: "${text}"` }],

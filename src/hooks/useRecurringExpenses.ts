@@ -1,6 +1,8 @@
 import { useEffect, useState, useCallback } from 'react'
 import { useUser } from '@clerk/clerk-react'
 import { supabase } from '../lib/supabase'
+import type { RecurringConfig } from '../types'
+import { createRecurringConfig } from '../utils/recurring'
 
 export type RecurringTransaction = {
   id: string
@@ -11,6 +13,7 @@ export type RecurringTransaction = {
   frequency: 'monthly' | 'weekly' | 'yearly' | 'daily'
   last_logged_at: string
   created_at: string
+  recurring: RecurringConfig
 }
 
 export type RecurringSummary = {
@@ -40,6 +43,18 @@ export function useRecurringExpenses(): RecurringSummary {
   const [isLoading, setIsLoading] = useState(true)
   const [error, setError] = useState<string | null>(null)
 
+  const parseRecurring = (value: unknown): RecurringConfig | null => {
+    if (!value) return null
+    if (typeof value === 'string') {
+      try {
+        return JSON.parse(value) as RecurringConfig
+      } catch {
+        return null
+      }
+    }
+    return value as RecurringConfig
+  }
+
   const fetchRecurring = useCallback(async () => {
     if (!user?.id) return
     setIsLoading(true)
@@ -48,14 +63,30 @@ export function useRecurringExpenses(): RecurringSummary {
     try {
       const { data, error: supaError } = await supabase
         .from('transactions')
-        .select('id, name, amount, type, category, frequency, last_logged_at, created_at')
+        .select('id, name, amount, type, category, frequency, recurring, date, created_at, is_auto_generated')
         .eq('user_id', user.id)
         .neq('frequency', 'none')
-        .not('frequency', 'is', null)
         .order('amount', { ascending: false })
 
       if (supaError) throw supaError
-      setTransactions((data ?? []) as RecurringTransaction[])
+      const recurringItems: RecurringTransaction[] = []
+      for (const row of data ?? []) {
+        if (row.is_auto_generated) continue
+          const recurring = parseRecurring(row.recurring)
+          if (!recurring) continue
+          recurringItems.push({
+            id: row.id as string,
+            name: row.name as string,
+            amount: Number(row.amount),
+            type: row.type as 'expense' | 'income',
+            category: (row.category as string) ?? null,
+            frequency: row.frequency as RecurringTransaction['frequency'],
+            last_logged_at: recurring.lastGeneratedAt,
+            created_at: row.created_at as string,
+            recurring,
+          })
+      }
+      setTransactions(recurringItems)
     } catch (err: unknown) {
       setError(err instanceof Error ? err.message : 'Failed to load recurring expenses')
     } finally {
@@ -79,9 +110,21 @@ export function useRecurringExpenses(): RecurringSummary {
 
   const updateFrequency = async (id: string, frequency: string) => {
     if (!user?.id) return
+    const current = transactions.find((item) => item.id === id)
+    if (!current) return
+    const updates = frequency === 'none'
+      ? { frequency, recurring: null }
+      : {
+          frequency,
+          recurring: createRecurringConfig(
+            frequency as RecurringTransaction['frequency'],
+            new Date(current.created_at),
+            { ...current.recurring, frequency: frequency as RecurringTransaction['frequency'] }
+          ),
+        }
     await supabase
       .from('transactions')
-      .update({ frequency })
+      .update(updates)
       .eq('id', id)
       .eq('user_id', user.id)
     await fetchRecurring()
@@ -91,7 +134,7 @@ export function useRecurringExpenses(): RecurringSummary {
     if (!user?.id) return
     await supabase
       .from('transactions')
-      .delete()
+      .update({ frequency: 'none', recurring: null })
       .eq('id', id)
       .eq('user_id', user.id)
     await fetchRecurring()
