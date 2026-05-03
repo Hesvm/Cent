@@ -79,6 +79,18 @@ SPECIAL CASES:
 - Person name as expense ("paid John 200"): name="John", category=null
 - Vague ("stuff 50", "thing for mom"): name as-is, category=null
 - Dutch names: treated same as English — Dutch keywords are valid signals
+- Persian/Farsi: inputs may use Eastern Arabic digits (۰۱۲۳۴۵۶۷۸۹) or Arabic-Indic digits (٠١٢٣٤٥٦٧٨٩) — treat them as equivalent to 0-9 when parsing amounts
+
+PERSIAN DISAMBIGUATION RULES:
+- بازی alone → Gaming; if context is kids/play/fun with no gaming device → Entertainment
+- خرید alone → Shopping; with food words (خواربار, مواد غذایی) → Groceries
+- اجاره as payment → Housing & Rent; "درآمد اجاره" or "اجاره دریافتی" → Rental Income
+- قرض → Loans & Lending (never Charity)
+- صدقه / نذر / خیریه → Charity & Donations
+- بار alone → null (not Alcohol & Bars unless explicit drink/nightlife context)
+- درآمد alone → Salary & Income (generic income); with پروژه/فریلنس → Freelance & Side Income; with اجاره → Rental Income
+- دارو / داروخانه → Health & Medical (not Groceries)
+- کتاب in education context → Education; standalone → Books & Reading
 
 EXAMPLES:
 "coffee 50" → {name:"Coffee",amount:50,type:"expense",category:"Coffee & Cafés",frequency:"none",tags:[],confidence:{name:0.95,amount:0.95,category:0.95,frequency:0.99}}
@@ -121,6 +133,28 @@ EXAMPLES:
 "قرض دادن به علی 500000" → {name:"قرض علی",amount:500000,type:"expense",category:"Loans & Lending",frequency:"none",tags:[],confidence:{name:0.95,amount:0.99,category:0.97,frequency:0.99}}
 "بنزین 60000" → {name:"بنزین",amount:60000,type:"expense",category:"Transport",frequency:"none",tags:[],confidence:{name:0.99,amount:0.99,category:0.99,frequency:0.99}}
 "داروخانه 35000" → {name:"داروخانه",amount:35000,type:"expense",category:"Health & Medical",frequency:"none",tags:[],confidence:{name:0.99,amount:0.99,category:0.99,frequency:0.99}}
+"اشتراک نتفلیکس 150000" → {name:"اشتراک نتفلیکس",amount:150000,type:"expense",category:"Streaming & Subscriptions",frequency:"none",tags:[],confidence:{name:0.99,amount:0.99,category:0.99,frequency:0.99}}
+"خرید لباس 800000" → {name:"خرید لباس",amount:800000,type:"expense",category:"Shopping",frequency:"none",tags:[],confidence:{name:0.99,amount:0.99,category:0.97,frequency:0.99}}
+"بیمه ماشین 350000" → {name:"بیمه ماشین",amount:350000,type:"expense",category:"Insurance",frequency:"none",tags:[],confidence:{name:0.99,amount:0.99,category:0.99,frequency:0.99}}
+"سینما 200000" → {name:"سینما",amount:200000,type:"expense",category:"Entertainment",frequency:"none",tags:[],confidence:{name:0.99,amount:0.99,category:0.99,frequency:0.99}}
+"هتل سفر 2000000" → {name:"هتل سفر",amount:2000000,type:"expense",category:"Travel",frequency:"none",tags:[],confidence:{name:0.95,amount:0.99,category:0.97,frequency:0.99}}
+"حقوق ماه 15000000" → {name:"حقوق",amount:15000000,type:"income",category:"Salary & Income",frequency:"none",tags:[],confidence:{name:0.99,amount:0.99,category:0.99,frequency:0.99}}
+"هدیه تولد 300000" → {name:"هدیه تولد",amount:300000,type:"expense",category:"Gifts & Occasions",frequency:"none",tags:[],confidence:{name:0.99,amount:0.99,category:0.97,frequency:0.99}}
+"مالیات 500000" → {name:"مالیات",amount:500000,type:"expense",category:"Government & Taxes",frequency:"none",tags:[],confidence:{name:0.99,amount:0.99,category:0.99,frequency:0.99}}
+"خرید سهام 5000000" → {name:"خرید سهام",amount:5000000,type:"expense",category:"Investments",frequency:"none",tags:[],confidence:{name:0.99,amount:0.99,category:0.99,frequency:0.99}}
+"درآمد پروژه 3000000" → {name:"درآمد پروژه",amount:3000000,type:"income",category:"Freelance & Side Income",frequency:"none",tags:[],confidence:{name:0.99,amount:0.99,category:0.97,frequency:0.99}}
+"درآمد اجاره 4000000" → {name:"درآمد اجاره",amount:4000000,type:"income",category:"Rental Income",frequency:"none",tags:[],confidence:{name:0.99,amount:0.99,category:0.99,frequency:0.99}}
+"کلاس آموزشی 150000" → {name:"کلاس آموزشی",amount:150000,type:"expense",category:"Education",frequency:"none",tags:[],confidence:{name:0.99,amount:0.99,category:0.97,frequency:0.99}}
+"پوشک بچه 80000" → {name:"پوشک بچه",amount:80000,type:"expense",category:"Childcare & Kids",frequency:"none",tags:[],confidence:{name:0.99,amount:0.99,category:0.97,frequency:0.99}}
+"دامپزشک 200000" → {name:"دامپزشک",amount:200000,type:"expense",category:"Pets",frequency:"none",tags:[],confidence:{name:0.99,amount:0.99,category:0.99,frequency:0.99}}
+"آرایشگاه 150000" → {name:"آرایشگاه",amount:150000,type:"expense",category:"Personal Care & Beauty",frequency:"none",tags:[],confidence:{name:0.99,amount:0.99,category:0.99,frequency:0.99}}
+"قبض برق 120000" → {name:"قبض برق",amount:120000,type:"expense",category:"Utilities",frequency:"none",tags:[],confidence:{name:0.99,amount:0.99,category:0.99,frequency:0.99}}
+"خیریه 500000" → {name:"خیریه",amount:500000,type:"expense",category:"Charity & Donations",frequency:"none",tags:[],confidence:{name:0.99,amount:0.99,category:0.99,frequency:0.99}}
+"تعمیر خانه 1500000" → {name:"تعمیر خانه",amount:1500000,type:"expense",category:"Home Maintenance & Repairs",frequency:"none",tags:[],confidence:{name:0.99,amount:0.99,category:0.97,frequency:0.99}}
+"دفتر کار 800000" → {name:"دفتر کار",amount:800000,type:"expense",category:"Office & Work Expenses",frequency:"none",tags:[],confidence:{name:0.99,amount:0.99,category:0.95,frequency:0.99}}
+"وام بانکی 2000000" → {name:"وام بانکی",amount:2000000,type:"expense",category:"Loans & Lending",frequency:"none",tags:[],confidence:{name:0.99,amount:0.99,category:0.99,frequency:0.99}}
+"تاکسی ۳۰۰۰۰" → {name:"تاکسی",amount:30000,type:"expense",category:"Transport",frequency:"none",tags:[],confidence:{name:0.99,amount:0.99,category:0.99,frequency:0.99}}
+"اجاره ۱۲۰۰۰۰۰" → {name:"اجاره",amount:1200000,type:"expense",category:"Housing & Rent",frequency:"none",tags:[],confidence:{name:0.99,amount:0.99,category:0.99,frequency:0.99}}
 
 Return ONLY valid JSON. No markdown, no explanation.`
 
