@@ -12,21 +12,21 @@ FIELDS:
   - expense signals: spent, paid, bought, cost, fee, subscription
   - negative amounts → income (refund)
   - default to user-selected type when ambiguous
-- category: exactly one of the 30 categories below, or null if confidence ≤ 0.70
+- category: exactly one of the 31 categories below, or null if confidence ≤ 0.70
 - frequency: "none" | "daily" | "weekly" | "monthly" | "yearly"
   - ONLY set non-"none" if EXPLICITLY stated ("monthly", "weekly", "annual", etc.)
   - Do NOT infer from recurring words like "rent" — leave as "none"
 - tags: [] (always empty array)
 - confidence: { name: 0-1, amount: 0-1, category: 0-1, frequency: 0-1 }
 
-THE 30 CATEGORIES (use exact names):
+THE 31 CATEGORIES (use exact names):
 Food & Drink: Restaurants & Dining, Coffee & Cafés, Groceries, Alcohol & Bars
 Transport & Travel: Transport, Travel
 Health & Wellness: Health & Medical, Fitness & Sports, Personal Care & Beauty
 Entertainment: Entertainment, Streaming & Subscriptions, Gaming, Books & Reading
 Home & Life: Housing & Rent, Utilities, Home Maintenance & Repairs, Pets, Childcare & Kids
 Shopping: Shopping, Gifts & Occasions, Charity & Donations
-Finance: Insurance, Banking & Finance, Investments, Government & Taxes
+Finance: Loans & Lending, Insurance, Banking & Finance, Investments, Government & Taxes
 Work & Education: Education, Office & Work Expenses
 Income: Salary & Income, Freelance & Side Income, Rental Income
 
@@ -48,6 +48,15 @@ CATEGORY RULES:
 - Ambiguous generic brands (Apple, Amazon, Google alone) → null.
 - Apple Music / Apple TV+ → Streaming & Subscriptions.
 - Amazon Prime → Streaming & Subscriptions.
+- lend / lent / loan to / loaned someone → Loans & Lending (expense).
+- borrow / borrowed / owe / owed → Loans & Lending.
+- paid back / pay back / pay someone back → Loans & Lending (income if receiving, expense if paying).
+- IOU / schuld / geleend / قرض → Loans & Lending.
+- "paid John 200" with no other context → name="John", category=null (person payment, ambiguous).
+- "lent John 200" → name="Lent John", category="Loans & Lending" (explicit lending signal).
+- protein bar / energy bar / granola bar / cereal bar → Groceries, NOT Alcohol & Bars.
+- bar exam / sidebar / crowbar / toolbar → null or relevant category, NOT Alcohol & Bars.
+- "bar" alone with no drink/nightlife context → null, NOT Alcohol & Bars.
 
 CONFIDENCE RULES:
 - category: 0.95+ if exact brand match, 0.85+ if clear generic match, ≤0.70 returns null
@@ -83,6 +92,35 @@ EXAMPLES:
 "Airbnb payout 800" → {name:"Airbnb payout",amount:800,type:"income",category:"Rental Income",frequency:"none",tags:[],confidence:{name:0.95,amount:0.99,category:0.95,frequency:0.99}}
 "Apple 999" → {name:"Apple",amount:999,type:"expense",category:null,frequency:"none",tags:[],confidence:{name:0.95,amount:0.99,category:0.55,frequency:0.99}}
 "fifty bucks" → {name:null,amount:50,type:"expense",category:null,frequency:"none",tags:[],confidence:{name:0,amount:0.85,category:0,frequency:0.99}}
+"lent John 200" → {name:"Lent John",amount:200,type:"expense",category:"Loans & Lending",frequency:"none",tags:[],confidence:{name:0.95,amount:0.99,category:0.97,frequency:0.99}}
+"I owe Sarah 50" → {name:"Owe Sarah",amount:50,type:"expense",category:"Loans & Lending",frequency:"none",tags:[],confidence:{name:0.95,amount:0.99,category:0.97,frequency:0.99}}
+"borrow 100" → {name:"Borrow",amount:100,type:"expense",category:"Loans & Lending",frequency:"none",tags:[],confidence:{name:0.85,amount:0.99,category:0.92,frequency:0.99}}
+"paid back Mark 150" → {name:"Paid back Mark",amount:150,type:"expense",category:"Loans & Lending",frequency:"none",tags:[],confidence:{name:0.95,amount:0.99,category:0.95,frequency:0.99}}
+"protein bar 5" → {name:"Protein bar",amount:5,type:"expense",category:"Groceries",frequency:"none",tags:[],confidence:{name:0.99,amount:0.99,category:0.95,frequency:0.99}}
+"energy bar 3" → {name:"Energy bar",amount:3,type:"expense",category:"Groceries",frequency:"none",tags:[],confidence:{name:0.99,amount:0.99,category:0.95,frequency:0.99}}
+"pizza 15" → {name:"Pizza",amount:15,type:"expense",category:"Restaurants & Dining",frequency:"none",tags:[],confidence:{name:0.99,amount:0.99,category:0.95,frequency:0.99}}
+"bus 3" → {name:"Bus",amount:3,type:"expense",category:"Transport",frequency:"none",tags:[],confidence:{name:0.99,amount:0.99,category:0.95,frequency:0.99}}
+"taxi 12" → {name:"Taxi",amount:12,type:"expense",category:"Transport",frequency:"none",tags:[],confidence:{name:0.99,amount:0.99,category:0.95,frequency:0.99}}
+"game 60" → {name:"Game",amount:60,type:"expense",category:"Gaming",frequency:"none",tags:[],confidence:{name:0.99,amount:0.99,category:0.85,frequency:0.99}}
+"watch 200" → {name:"Watch",amount:200,type:"expense",category:"Shopping",frequency:"none",tags:[],confidence:{name:0.99,amount:0.99,category:0.85,frequency:0.99}}
+"trip 500" → {name:"Trip",amount:500,type:"expense",category:"Travel",frequency:"none",tags:[],confidence:{name:0.95,amount:0.99,category:0.85,frequency:0.99}}
+"plane ticket 300" → {name:"Plane ticket",amount:300,type:"expense",category:"Travel",frequency:"none",tags:[],confidence:{name:0.99,amount:0.99,category:0.95,frequency:0.99}}
+"tea 4" → {name:"Tea",amount:4,type:"expense",category:"Coffee & Cafés",frequency:"none",tags:[],confidence:{name:0.99,amount:0.99,category:0.90,frequency:0.99}}
+"book 25" → {name:"Book",amount:25,type:"expense",category:"Books & Reading",frequency:"none",tags:[],confidence:{name:0.99,amount:0.99,category:0.85,frequency:0.99}}
+"movie 12" → {name:"Movie",amount:12,type:"expense",category:"Entertainment",frequency:"none",tags:[],confidence:{name:0.99,amount:0.99,category:0.90,frequency:0.99}}
+"sandwich 8" → {name:"Sandwich",amount:8,type:"expense",category:"Restaurants & Dining",frequency:"none",tags:[],confidence:{name:0.99,amount:0.99,category:0.95,frequency:0.99}}
+"train 25" → {name:"Train",amount:25,type:"expense",category:"Transport",frequency:"none",tags:[],confidence:{name:0.99,amount:0.99,category:0.95,frequency:0.99}}
+"laptop 1200" → {name:"Laptop",amount:1200,type:"expense",category:"Shopping",frequency:"none",tags:[],confidence:{name:0.99,amount:0.99,category:0.90,frequency:0.99}}
+"shoes 80" → {name:"Shoes",amount:80,type:"expense",category:"Shopping",frequency:"none",tags:[],confidence:{name:0.99,amount:0.99,category:0.90,frequency:0.99}}
+"رستوران 45000" → {name:"رستوران",amount:45000,type:"expense",category:"Restaurants & Dining",frequency:"none",tags:[],confidence:{name:0.99,amount:0.99,category:0.99,frequency:0.99}}
+"تاکسی 30000" → {name:"تاکسی",amount:30000,type:"expense",category:"Transport",frequency:"none",tags:[],confidence:{name:0.99,amount:0.99,category:0.99,frequency:0.99}}
+"قهوه 25000" → {name:"قهوه",amount:25000,type:"expense",category:"Coffee & Cafés",frequency:"none",tags:[],confidence:{name:0.99,amount:0.99,category:0.99,frequency:0.99}}
+"ورزش 500000" → {name:"ورزش",amount:500000,type:"expense",category:"Fitness & Sports",frequency:"none",tags:[],confidence:{name:0.99,amount:0.99,category:0.99,frequency:0.99}}
+"خرید خواربار 45000" → {name:"خرید خواربار",amount:45000,type:"expense",category:"Groceries",frequency:"none",tags:[],confidence:{name:0.95,amount:0.99,category:0.95,frequency:0.99}}
+"اجاره 1200000" → {name:"اجاره",amount:1200000,type:"expense",category:"Housing & Rent",frequency:"none",tags:[],confidence:{name:0.99,amount:0.99,category:0.99,frequency:0.99}}
+"قرض دادن به علی 500000" → {name:"قرض علی",amount:500000,type:"expense",category:"Loans & Lending",frequency:"none",tags:[],confidence:{name:0.95,amount:0.99,category:0.97,frequency:0.99}}
+"بنزین 60000" → {name:"بنزین",amount:60000,type:"expense",category:"Transport",frequency:"none",tags:[],confidence:{name:0.99,amount:0.99,category:0.99,frequency:0.99}}
+"داروخانه 35000" → {name:"داروخانه",amount:35000,type:"expense",category:"Health & Medical",frequency:"none",tags:[],confidence:{name:0.99,amount:0.99,category:0.99,frequency:0.99}}
 
 Return ONLY valid JSON. No markdown, no explanation.`
 

@@ -28,6 +28,7 @@ export const CATEGORIES = [
   { name: 'Gifts & Occasions',          slug: 'gift',         group: 'Lifestyle'          },
   { name: 'Charity & Donations',        slug: 'heart',        group: 'Lifestyle'          },
   // ─── Finance ─────────────────────────────────────────────────────────────
+  { name: 'Loans & Lending',            slug: 'handshake',    group: 'Finance'            },
   { name: 'Insurance',                  slug: 'insurance',    group: 'Finance'            },
   { name: 'Banking & Finance',          slug: 'bank',         group: 'Finance'            },
   { name: 'Investments',                slug: 'money',        group: 'Finance'            },
