@@ -139,6 +139,20 @@ const COMPOUND_OVERRIDES: [string[], string][] = [
   [['protein bar', 'energy bar', 'granola bar', 'cereal bar', 'snack bar', 'nutrition bar', 'power bar'], 'Groceries'],
   [['bar exam', 'bar association', 'crowbar', 'sidebar', 'toolbar', 'handlebar', 'rebar'], 'null'],
   [['paid back', 'pay back', 'paying back'], 'Loans & Lending'],
+  // Persian multi-word phrases
+  [['قرض دادن', 'قرض گرفتن', 'قرض به', 'قرض از'], 'Loans & Lending'],
+  [['خرید خواربار', 'خرید مواد غذایی'], 'Groceries'],
+  [['درآمد اجاره', 'اجاره دریافتی'], 'Rental Income'],
+  [['ارز دیجیتال', 'بیت کوین', 'کریپتو'], 'Investments'],
+  [['مهد کودک', 'مدرسه بچه'], 'Childcare & Kids'],
+  [['بیمه ماشین', 'بیمه درمان', 'بیمه عمر'], 'Insurance'],
+  [['کافی شاپ', 'کافه قهوه'], 'Coffee & Cafés'],
+  [['فست فود', 'فست‌فود'], 'Restaurants & Dining'],
+  [['اجاره خانه', 'اجاره ماهانه'], 'Housing & Rent'],
+  [['خرید لباس', 'خرید کفش', 'خرید پوشاک'], 'Shopping'],
+  [['بلیط هواپیما', 'بلیط قطار', 'بلیط اتوبوس'], 'Transport'],
+  [['حق عضویت', 'حق اشتراک'], 'Streaming & Subscriptions'],
+  [['پول پس دادن', 'برگشت پول'], 'Loans & Lending'],
 ]
 
 export function inferCategory(text: string): { category: string | null; confidence: number } {
