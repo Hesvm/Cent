@@ -1,6 +1,23 @@
 import { useState, useCallback, useRef } from 'react'
 import type { ParsedExpense, ClarificationStep, TransactionType, Frequency } from '../types'
 
+// ─── Persian / Arabic-Indic digit normalisation ───────────────────────────────
+
+const EASTERN_ARABIC = '۰۱۲۳۴۵۶۷۸۹'
+const ARABIC_INDIC   = '٠١٢٣٤٥٦٧٨٩'
+
+function normalizeDigits(text: string): string {
+  let out = ''
+  for (const ch of text) {
+    const ea = EASTERN_ARABIC.indexOf(ch)
+    if (ea !== -1) { out += ea; continue }
+    const ai = ARABIC_INDIC.indexOf(ch)
+    if (ai !== -1) { out += ai; continue }
+    out += ch
+  }
+  return out
+}
+
 // ─── Constants ────────────────────────────────────────────────────────────────
 
 // Per spec §4C / §11 implementation notes
@@ -142,6 +159,7 @@ export function inferCategory(text: string): { category: string | null; confiden
 }
 
 function localParse(text: string, type: TransactionType): ParsedExpense & { hasRecurringSignal: boolean; isNegative: boolean; rawText: string } {
+  text = normalizeDigits(text)
   const lower = text.toLowerCase().trim()
 
   // ── Negative / refund amount (§1D, §10A) ─────────────────────────────────
