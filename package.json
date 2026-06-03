@@ -13,6 +13,7 @@
   "dependencies": {
     "@anthropic-ai/sdk": "^0.39.0",
     "@clerk/clerk-react": "^5.0.0",
+    "@clerk/themes": "^2.4.57",
     "@supabase/supabase-js": "^2.39.0",
     "@vercel/node": "^5.7.12",
     "groq-sdk": "^1.1.2",
